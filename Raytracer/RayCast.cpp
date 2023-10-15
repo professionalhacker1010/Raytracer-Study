@@ -1,5 +1,6 @@
 #include "RayCast.h"
 #include "Util.h"
+#include "Constants.h"
 
 float Ray::CalculatePlaneIntersection(const Vec3& norm, const Ray& ray, const float d)
 {
@@ -14,14 +15,14 @@ float Ray::CalculatePlaneIntersection(const Vec3& norm, const Ray& ray, const fl
 
 float Ray::IntersectAABB(const Ray& ray, Vec3 minBounds, Vec3 maxBounds)
 {
-	double tx1 = (minBounds[0] - ray.origin[0]) * ray.dInv[0], tx2 = (maxBounds[0] - ray.origin[0]) * ray.dInv[0];
-	double tmin = fmin(tx1, tx2);
-	double tmax = fmax(tx1, tx2);
-	double ty1 = (minBounds[1] - ray.origin[1]) * ray.dInv[1], ty2 = (maxBounds[1] - ray.origin[1]) * ray.dInv[1];
-	tmin = fmax(tmin, fmin(ty1, ty2)), tmax = fmin(tmax, fmax(ty1, ty2));
-	double tz1 = (minBounds[2] - ray.origin[2]) * ray.dInv[2], tz2 = (maxBounds[2] - ray.origin[2]) * ray.dInv[2];
-	tmin = fmax(tmin, fmin(tz1, tz2)), tmax = fmin(tmax, fmax(tz1, tz2));
-	if (tmax >= tmin && tmin < ray.maxDist && tmax > 0.) return tmin;
+	float tx1 = (minBounds[0] - ray.origin[0]) * ray.dInv[0], tx2 = (maxBounds[0] - ray.origin[0]) * ray.dInv[0];
+	float tmin = (float)fmin(tx1, tx2);
+	float tmax = (float)fmax(tx1, tx2);
+	float ty1 = (minBounds[1] - ray.origin[1]) * ray.dInv[1], ty2 = (maxBounds[1] - ray.origin[1]) * ray.dInv[1];
+	tmin = (float)fmax(tmin, fmin(ty1, ty2)), tmax = (float)fmin(tmax, fmax(ty1, ty2));
+	float tz1 = (minBounds[2] - ray.origin[2]) * ray.dInv[2], tz2 = (maxBounds[2] - ray.origin[2]) * ray.dInv[2];
+	tmin = (float)fmax(tmin, fmin(tz1, tz2)), tmax = (float)fmin(tmax, fmax(tz1, tz2));
+	if (tmax >= tmin && tmin < ray.maxDist && tmax > 0.0f) return tmin;
 	return -1;
 }
 
@@ -32,9 +33,17 @@ bool Ray::IntersectAABB_SIMD(const Ray& ray, const __m128 bmin4, const __m128 bm
 	__m128 t1 = _mm_mul_ps(_mm_sub_ps(_mm_and_ps(bmin4, mask4), ray.origin4), ray.dInv4);
 	__m128 t2 = _mm_mul_ps(_mm_sub_ps(_mm_and_ps(bmax4, mask4), ray.origin4), ray.dInv4);
 	__m128 vmax4 = _mm_max_ps(t1, t2), vmin4 = _mm_min_ps(t1, t2);
-	float tmax = fmin(vmax4.m128_f32[0], fmin(vmax4.m128_f32[1], vmax4.m128_f32[2]));
-	float tmin = fmax(vmin4.m128_f32[0], fmax(vmin4.m128_f32[1], vmin4.m128_f32[2]));
-	if (tmax >= tmin && tmin < ray.maxDist && tmax > 0) {
+	float tmax = _mm_min_ps(
+		_mm_min_ps(vmax4, _mm_shuffle_ps(vmax4, vmax4, _MM_SHUFFLER(1, 1, 1, 1))),
+		_mm_min_ps(vmax4, _mm_shuffle_ps(vmax4, vmax4, _MM_SHUFFLER(2, 2, 2, 2)))
+	).m128_f32[0];
+	float tmin = _mm_max_ps(
+		_mm_max_ps(vmin4, _mm_shuffle_ps(vmin4, vmin4, _MM_SHUFFLER(1, 1, 1, 1))),
+		_mm_max_ps(vmin4, _mm_shuffle_ps(vmin4, vmin4, _MM_SHUFFLER(2, 2, 2, 2)))
+	).m128_f32[0];
+	//float tmax = fmin(vmax4.m128_f32[0], fmin(vmax4.m128_f32[1], vmax4.m128_f32[2]));
+	//float tmin = fmax(vmin4.m128_f32[0], fmax(vmin4.m128_f32[1], vmin4.m128_f32[2]));
+	if (tmax >= tmin && tmin < ray.maxDist && tmax > 0.0f) {
 		out = tmin;
 		return true;
 	}

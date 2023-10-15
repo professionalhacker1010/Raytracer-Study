@@ -209,32 +209,42 @@ void DrawScene()
 {
 	clock_t totalTime = 0;
 	clock_t startDrawTime = clock();
-	Vertex vert;
-	unsigned int tileSize = 16;
-	for (unsigned int x = 0; x < WIDTH; x+=tileSize) for (unsigned int y = 0; y < HEIGHT; y += tileSize)
-	{
-#pragma omp parallel for schedule(dynamic)
-		for (unsigned int u = x; u < x + tileSize; u++) for (unsigned int v = y; v < y + tileSize; v++)	
-		{
-			//if i used x and y here it gave a kinda cool pixellated effect lol
-			int hit = RayCast(camera.GetRay(u, v), vert);
 
-			if (hit) {
-				// cast shadow ray
-				//Vec3 color = CastShadowRays(vert, hit);
-				Vec3 color = vert.color_diffuse * 255.0f;
-				for (unsigned int i = 0; i < 3; i++) {
-					pixelData[v][u][i] = (GLubyte)(color[i]);
+	clock_t raycastTime = 0;
+
+	Vertex vert;
+	const int tileSize = 16;
+	int x, y, u, v, i;
+
+#pragma omp parallel for schedule(dynamic) reduction(+:raycastTime), private(y, u, v, i, vert)
+	for (x = 0; x < WIDTH; x+=tileSize) {
+//#pragma omp parallel for schedule(dynamic), private(u, v, i, vert)
+		for (y = 0; y < HEIGHT; y += tileSize) {
+			for (u = x; u < x + tileSize; u++) {
+//#pragma omp parallel for schedule(dynamic, 10), private(i, vert)
+				for (v = y; v < y + tileSize; v++) {
+					//if i used x and y here it gave a kinda cool pixellated effect lol
+					clock_t startRayTime = clock();
+					if (RayCast(camera.GetRay(u, v), vert)) {
+						// cast shadow ray
+						//Vec3 color = CastShadowRays(vert, hit);
+						Vec3 color = vert.color_diffuse * 255.0f;
+						for (i = 0; i < 3; i++) {
+							pixelData[v][u][i] = (GLubyte)(color[i]);
+						}
+					}
+					raycastTime += (clock() - startRayTime);
 				}
 			}
 		}
 	}
+
 	totalTime = (clock() - startDrawTime);
 	renderQuad->Draw(pixelData);
 
 	glFlush();
 
-	Util::Print("Avg ms per raycast = " + std::to_string(totalTime / (double)(WIDTH * HEIGHT)));
+	Util::Print("Avg ms per raycast = " + std::to_string(raycastTime / (double)(WIDTH * HEIGHT)));
 	Util::Print("Total triangle intersections = " + std::to_string(triangles[0].debug()));
 	Util::Print("False intersections = " + std::to_string(BVHeirarchy->falseBranch));
 	Util::Print("Total draw secs = " + std::to_string((clock() - startDrawTime)/1000.0f));
@@ -253,7 +263,6 @@ bool LoadScene(char* argv)
 	fscanf(file, "%i", &number_of_objects);
 
 	// printf("number of objects: %i\n",number_of_objects);
-	char str[200];
 
 	Util::parse_doubles(file, "amb:", ambient_light);
 

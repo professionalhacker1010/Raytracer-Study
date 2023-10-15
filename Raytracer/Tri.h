@@ -25,7 +25,7 @@ public:
 	Vertex verts[3];
 	Vec3 centroid;
 	Vec3 normal;
-	double d;
+	float d;
 	int id;
 
 	unsigned int dimOne = 0, dimTwo = 1;

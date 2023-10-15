@@ -88,7 +88,6 @@ public:
 
 #pragma region plot pixels
 	static void plot_pixel_display(int x, int y, unsigned char r, unsigned char g, unsigned char b);
-	static void plot_pixel_jpeg(int x, int y, unsigned char r, unsigned char g, unsigned char b);
 	static void plot_pixel(int x, int y, unsigned char r, unsigned char g, unsigned char b);
 #pragma endregion
 };

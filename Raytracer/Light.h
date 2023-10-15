@@ -1,7 +1,7 @@
 #pragma once
 #include "Vector.h"
 
-typedef struct Light
+struct Light
 {
 	Vec3 position;
 	Vec3 color;

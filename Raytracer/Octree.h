@@ -31,7 +31,7 @@ public:
 	
 	void Clean(Node* root);
 	Node* FindNode(Node* root, const Vec3& pos);
-	bool CalculateIntersection(const class Ray& ray, struct HitInfo* out, int ignoreID = 0);
+	bool CalculateIntersection(const struct Ray& ray, struct HitInfo* out, int ignoreID = 0);
 
 	enum CubeFace {
 		FRONT, LEFT, BOTTOM,

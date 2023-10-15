@@ -2,8 +2,7 @@
 #include <math.h>
 #include <string>
 #include <smmintrin.h>
-
-#define _MM_SHUFFLER( xi, yi, zi, wi ) _MM_SHUFFLE( wi, zi, yi, xi )
+#include "Constants.h"
 
 struct Vec3 {
 	explicit Vec3() { mC = _mm_setzero_ps(); }

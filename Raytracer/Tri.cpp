@@ -1,8 +1,9 @@
 #include "Tri.h"
 #include "RayCast.h"
 #include "Util.h"
+#include <atomic>
 
-int intersectionChecks;
+std::atomic_int intersectionChecks;
 
 bool Tri::CalculateIntersection(const Ray& ray, HitInfo& out) const
 {
@@ -106,7 +107,7 @@ void Tri::CachedCalculations()
 	normal = Vec3::Cross(planeVec1, planeVec2);
 	normal.Normalize();
 
-	centroid = (verts[0].position + verts[1].position + verts[2].position) * (1. / 3.);
+	centroid = (verts[0].position + verts[1].position + verts[2].position) * (1.0f / 3.0f);
 
 	if (Util::doubleCompare(verts[0].position[0], verts[1].position[0]) && Util::doubleCompare(verts[0].position[0], verts[2].position[0])) {
 		dimOne = 2;

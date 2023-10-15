@@ -85,7 +85,7 @@ Node* Octree::FindNode(Node* root, const Vec3& pos)
 
 bool Octree::CalculateIntersection(const Ray& ray, HitInfo* out, int ignoreID)
 {
-	Vec3 epsilon = Vec3(ray.direction[0] * EPSILON, ray.direction[1] * EPSILON, ray.direction[2] * EPSILON);
+	Vec3 epsilon = Vec3(ray.direction[0] * (float)EPSILON, ray.direction[1] * (float)EPSILON, ray.direction[2] * (float)EPSILON);
 	Ray testRay(ray.origin, ray.direction);
 	Node* closestNode = root;
 	Tri* closestTri = nullptr;

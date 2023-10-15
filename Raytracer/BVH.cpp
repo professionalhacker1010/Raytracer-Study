@@ -2,6 +2,7 @@
 #include "Tri.h"
 #include "util.h"
 #include "RayCast.h"
+#include <vector>
 
 bool debugPrint = true;
 bool debugColor = false;
@@ -39,7 +40,6 @@ BVH::BVH(Tri* triangles, unsigned int numTris)
 	nodes = new BVHNode[numTris * 2 - 1];
 	triIndices = new unsigned int[numTris];
 	for (unsigned int i = 0; i < numTris; i++) triIndices[i] = i;
-	maxDepth = (int)sqrt(numTris) + 1;
 
 	BVHNode& root = nodes[0];
 	root.numTris = numTris;
@@ -66,13 +66,13 @@ BVH::~BVH()
 void BVH::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
 {
 	BVHNode* node = &nodes[nodeIdx];
-	BVHNode** stack = new BVHNode*[maxDepth];
 	unsigned int stackIdx = 0;
 	BVHNode* left, * right;
+	BVHNode* stack[MAX_BVH_STACK];
 
 	while (true)
 	{
-		if (node->IsLeaf())
+		if (node->numTris > 0)
 		{
 			//find the closest triangle hit
 			unsigned int maxIdx = node->numTris + node->leftFirst;
@@ -91,12 +91,12 @@ void BVH::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
 		right = &nodes[node->leftFirst + 1];
 		//get closest AABB intersection
 		float leftDist = FLT_MAX;
-		bool leftHit = Ray::IntersectAABB_SIMD(ray, left->min4, left->max4, leftDist);
+		Ray::IntersectAABB_SIMD(ray, left->min4, left->max4, leftDist);
 		float rightDist = FLT_MAX;
-		bool rightHit = Ray::IntersectAABB_SIMD(ray, right->min4, right->max4, rightDist);
+		Ray::IntersectAABB_SIMD(ray, right->min4, right->max4, rightDist);
 
 		//intersect with neither 
-		if (!leftHit && !rightHit) {
+		if (leftDist == FLT_MAX && rightDist == FLT_MAX) {
 			if (stackIdx == 0) break;
 			else node = stack[--stackIdx];
 		}
@@ -104,11 +104,14 @@ void BVH::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
 		//if intersected with the other child too, push it to the stack for later
 		else {
 			if (leftDist > rightDist) {
-				std::swap(left, right);
-				std::swap(leftHit, rightHit);
+				node = right;
+				if (leftDist != FLT_MAX) stack[stackIdx++] = left;
 			}
-			node = left;
-			if (rightHit) stack[stackIdx++] = right;
+			else {
+				node = left;
+				if (rightDist != FLT_MAX) stack[stackIdx++] = right;
+			}
+			
 		}
 	}
 }
@@ -218,8 +221,8 @@ void BVH::CalculateBestSplit(const BVHNode& parent, float& bestCost, float& best
 		float minBound = parent.max[axis], maxBound = parent.min[axis];
 		for (unsigned int i = parent.leftFirst; i < maxTriIdx; i++) {
 			Tri& tri = tris[triIndices[i]];
-			minBound = fmin(minBound, tri.centroid[axis]);
-			maxBound = fmax(maxBound, tri.centroid[axis]);
+			minBound = (float)fmin(minBound, tri.centroid[axis]);
+			maxBound = (float)fmax(maxBound, tri.centroid[axis]);
 		}
 		if (maxBound == minBound) return;
 		float boundSize = maxBound - minBound;
@@ -230,7 +233,7 @@ void BVH::CalculateBestSplit(const BVHNode& parent, float& bestCost, float& best
 		float step = boundSize / (float)BINS; //size of each bin relative to bound size
 		for (unsigned int i = parent.leftFirst; i < maxTriIdx; i++) {
 			Tri& tri = tris[triIndices[i]];
-			int binIdx = fmin(BINS - 1, (int)((tri.centroid[axis] - minBound) / step)); //the tri affects the bounds of whichever bin the centroid is in
+			int binIdx = (int)fmin(BINS - 1, (int)((tri.centroid[axis] - minBound) / step)); //the tri affects the bounds of whichever bin the centroid is in
 			bin[binIdx].numTris++;
 			for (unsigned int j = 0; j < 3; j++) bin[binIdx].bounds.Grow(tri.verts[j].position);
 		}
@@ -262,22 +265,8 @@ void BVH::CalculateBestSplit(const BVHNode& parent, float& bestCost, float& best
 				bestAxis = axis;
 			}
 		}
-
-		//float step = boundSize / (float)BINS;
-		//for (unsigned int i = 1; i < BINS; i++) {
-		//	float splitPos = minBound + (i)*step;
-		//	//based on splitPos and axis, calculate SA of resulting AABB's
-		//	float cost = SurfaceAreaHeuristic(parent, axis, splitPos);
-		//	Util::Print(std::to_string(cost));
-		//	if (cost < bestCost) {
-		//		bestCost = cost;
-		//		bestSplitPos = splitPos;
-		//		bestAxis = axis;
-		//	}
-		//}
 	//}
 }
-
 
 float BVH::SurfaceAreaHeuristic(const BVHNode& node, int axis, double splitPos)
 {

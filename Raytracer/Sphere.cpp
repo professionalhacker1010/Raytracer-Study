@@ -6,24 +6,24 @@
 bool Sphere::CalculateIntersection(const Ray& ray, HitInfo* out) const
 {
 	Vec3 diffVec = Vec3(ray.origin[0] - position[0], ray.origin[1] - position[1], ray.origin[2] - position[2]);
-	double a = 1.;
-	double b = 2 * (Vec3::Dot(ray.direction, diffVec));
-	double c = pow(diffVec[0], 2) + pow(diffVec[1], 2) + pow(diffVec[2], 2) - pow(radius, 2);
+	float a = 1.;
+	float b = 2 * (Vec3::Dot(ray.direction, diffVec));
+	float c = pow(diffVec[0], 2) + pow(diffVec[1], 2) + pow(diffVec[2], 2) - pow(radius, 2);
 
-	double determinant = pow(b, 2) - 4 * a * c;
+	float determinant = pow(b, 2) - 4 * a * c;
 
 	if (determinant < 0.) return false;
 
 	//quadratic formula
-	double t0, t1;
-	double sqrtDeterminant = sqrt(determinant);
+	float t0, t1;
+	float sqrtDeterminant = sqrt(determinant);
 	t0 = (-b + sqrtDeterminant) / 2.;
 	t1 = (-b - sqrtDeterminant) / 2.;
 
 	if (t0 < 0. || t1 < 0.) return false;
 
 	//get min t
-	double t = fmin(t0, t1);
+	float t = fmin(t0, t1);
 
 	//get intersection point, store distnace
 	Vec3 distVec;

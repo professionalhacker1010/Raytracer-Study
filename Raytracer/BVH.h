@@ -3,31 +3,10 @@
 #include "Constants.h"
 #include <xmmintrin.h>
 #include <ctime>
+#include <atomic>
 
 struct Ray;
 struct HitInfo;
-
-struct Bin {
-	Bin() {
-		bounds.min = Vec3(FLT_MAX);
-		bounds.max = Vec3(-FLT_MAX);
-	}
-	AABB bounds;
-	int numTris = 0;
-};
-
-struct BVHNode {
-	union {
-		struct { Vec3 min; unsigned int leftFirst; };
-		__m128 min4;
-	};
-	union {
-		struct { Vec3 max; unsigned int numTris; };
-		__m128 max4;
-	};
-	BVHNode() { min4 = max4 = _mm_set1_ps(0); }
-	bool IsLeaf() const { return numTris > 0; }
-};
 
 class BVH {
 public:
@@ -40,8 +19,30 @@ public:
 
 	//debug
 	clock_t constructionTime;
-	int falseBranch = 0;
+	std::atomic_int falseBranch = 0;
 private:
+	struct Bin {
+		Bin() {
+			bounds.min = Vec3(FLT_MAX);
+			bounds.max = Vec3(-FLT_MAX);
+		}
+		AABB bounds;
+		int numTris = 0;
+	};
+
+	struct BVHNode {
+		union {
+			struct { Vec3 min; unsigned int leftFirst; };
+			__m128 min4;
+		};
+		union {
+			struct { Vec3 max; unsigned int numTris; };
+			__m128 max4;
+		};
+		BVHNode() { min4 = max4 = _mm_set1_ps(0); }
+		bool IsLeaf() const { return numTris > 0; }
+	};
+
 	//look through tris in the node and update the AABB
 	void UpdateNodeBounds(unsigned int index);
 
@@ -62,5 +63,4 @@ private:
 	class Tri* tris;
 	int nodeCounter;
 	unsigned int* triIndices; //proxy for sorted tris, to avoid sorting the actual array
-	int maxDepth;
 };

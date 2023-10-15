@@ -6,10 +6,11 @@
 class Camera {
 public:
 	Camera();
-	Ray& GetRay(unsigned int x, unsigned int y);
+	Ray GetRay(unsigned int x, unsigned int y);
 	Vec3 position;
-private:
+	Vec3 rayDirections[WIDTH][HEIGHT];
+
 	void UpdateRays();
 	Ray rays[WIDTH][HEIGHT];
-	
+
 };
