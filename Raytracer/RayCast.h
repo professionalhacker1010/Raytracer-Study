@@ -5,7 +5,7 @@
 struct HitInfo {
 	Vec3 position;
 	float distance = FLT_MAX;
-	int triId = -1;
+	class Tri* hit = nullptr;
 };
 
 struct Ray {

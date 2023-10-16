@@ -22,6 +22,7 @@
 #include "Light.h"
 #include "BVH.h"
 #include "RenderQuad.h"
+#include "Mesh.h"
 
 char* filename = 0;
 
@@ -30,7 +31,6 @@ int mode = MODE_DISPLAY;
 unsigned char buffer[HEIGHT][WIDTH][3];
 
 Tri tris[MAX_TRIANGLES];
-Tri trisAnim[MAX_TRIANGLES];
 Sphere spheres[MAX_SPHERES];
 Light lights[MAX_LIGHTS];
 Vec3 ambient_light;
@@ -40,12 +40,18 @@ int numSpheres= 0;
 int numLights = 0;
 
 Camera camera;
+constexpr int NUM_MESHES = 1;
+Mesh* meshes[NUM_MESHES];
+constexpr int NUM_MESH_INST = 2;
+Vec3 meshPositions[2] = {
+	Vec3(0.0f, 1.0f, 0.0f),
+	Vec3(0.0f, -1.0f, 0.0f)
+};
+
 RenderQuad* renderQuad;
-BVH* BVHeirarchy;
 GLubyte pixelData[HEIGHT][WIDTH][3];
 
-float rotation = 0;
-float rotationSpeed = 0.5f;
+clock_t startFrameTime = 0;
 
 //debug
 int frames = 0;
@@ -54,21 +60,6 @@ clock_t totalTime = 0;
 clock_t raycastTime = 0;
 clock_t drawTime = 0;
 clock_t buildTime = 0;
-
-void Animate() {
-	if ((rotation += rotationSpeed) > 2.0f * PI) rotation -= 2.0f * PI;
-	float a = sinf(rotation) * 0.5f;
-	for (int i = 0; i < numTriangles; i++) {
-		for (int j = 0; j < 3; j++) {
-			Vec3 original = tris[i].verts[j].position;
-			float step = a * (original[1] - 0.2f) * 0.2f;
-			float x = original[0] * cosf(step) - original[1] * sinf(step);
-			float y = original[0] * sinf(step) + original[1] * cosf(step);
-			trisAnim[i].verts[j].position = Vec3(x, y, original[2]);
-			trisAnim[i].CachedCalculations();
-		}
-	}
-}
 
 bool Init()
 {
@@ -90,15 +81,16 @@ bool Init()
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	// precalculate triangle constants
-	Vec3 cameraDir(0., 0., -1.);
-	for (int i = 0; i < numTriangles; i++) {
-		// perpendicular distance from origin to plane
-		tris[i].d = -Vec3::Dot(tris[i].centroid - camera.position, tris[i].normal);
-		trisAnim[i] = tris[i];
+	//for (int i = 0; i < numTriangles; i++) {
+	//	// perpendicular distance from origin to plane
+	//	tris[i].d = -Vec3::Dot(tris[i].centroid - camera.position, tris[i].normal);
+	//}
+
+	for (int i = 0; i < NUM_MESHES; i++) {
+		meshes[i] = new Mesh(tris, numTriangles);
+		meshes[i]->bvh->Rebuild();
 	}
 
-	BVHeirarchy = new BVH(trisAnim, numTriangles);
-	BVHeirarchy->Rebuild();
 	renderQuad = new RenderQuad();
 	return true;
 }
@@ -128,8 +120,12 @@ int RayCast(Ray ray, Vertex& outVertex, int ignoreID = 0) {
 	//step through bvh for triangles
 	Tri* closestTri = nullptr;
 	HitInfo closestTriHit;
-	BVHeirarchy->CalculateIntersection(ray, closestTriHit);
-	if (closestTriHit.triId != -1) closestTri = &trisAnim[closestTriHit.triId];
+	for (int i = 0; i < NUM_MESH_INST; i++) {
+		ray.origin = camera.position + meshPositions[i];
+		meshes[0]->bvh->CalculateIntersection(ray, closestTriHit);
+	}
+	closestTri = closestTriHit.hit;
+	//if (closestTriHit.triId != -1) closestTri = &trisAnim[closestTriHit.triId];
 
 	//calculate normal for closest intersection (sphere or triangle)
 	//if (closestSphere && closestTri) {
@@ -205,13 +201,23 @@ Vec3 CastShadowRays(const Vertex& vertex, int ignoreID = 0) {
 
 void DrawScene()
 {
-	Animate();
+	clock_t c = clock();
+
+	float deltaTime = (float)(c - startFrameTime) / 1000.0f;
+	startFrameTime = c;
+
+	for (int i = 0; i < NUM_MESHES; i++) {
+		meshes[i]->Animate(deltaTime);
+	}
 
 	clock_t startBuildTime = clock();
-	BVHeirarchy->Refit();
-	buildTime += (clock() - startBuildTime);
+	for (int i = 0; i < NUM_MESHES; i++) {
+		meshes[i]->bvh->Refit();
+	}
+	c = clock();
+	buildTime += (c - startBuildTime);
 
-	clock_t startDrawTime = clock();
+	clock_t startDrawTime = c;
 
 	Vertex vert;
 	const int tileSize = 16;
@@ -252,9 +258,9 @@ void DrawScene()
 	int intersections = tris[0].debug();
 	triIntersections += intersections;
 	//Util::Print("Avg ms per raycast = " + std::to_string(raycastTime / (double)(WIDTH * HEIGHT)));
-	Util::Print("Total triangle intersections = " + std::to_string(intersections));
-	Util::Print("False intersections = " + std::to_string(BVHeirarchy->falseBranch));
-	BVHeirarchy->falseBranch = 0;
+	//Util::Print("Total triangle intersections = " + std::to_string(intersections));
+	//Util::Print("False intersections = " + std::to_string(meshes[0]->bvh->falseBranch));
+	meshes[0]->bvh->falseBranch = 0;
 	//Util::Print("Total draw secs = " + std::to_string(drawTime/1000.0f));
 	//Util::Print("BVH construction secs = " + std::to_string(buildTime/1000.0f));
 }
@@ -351,8 +357,8 @@ void OnKeyDown(unsigned char key, int x, int y) {
 void OnExit() {
 	Util::Print("Avg FPS = " + std::to_string((float)frames / ((float)totalTime / 1000.0f)));
 	Util::Print("Avg BVH construction secs = " + std::to_string(buildTime / ((float)frames * 1000.0f)));
-	Util::Print("Avg tri intersections = " + std::to_string(triIntersections / (float)frames));
-	Util::Print("Avg ms per raycast = " + std::to_string(raycastTime / (float)(WIDTH * HEIGHT)));
+	Util::Print("Avg tri intersections = " + std::to_string(triIntersections / ((float)frames)));
+	Util::Print("Avg ms per raycast = " + std::to_string(raycastTime / ((float)(WIDTH * HEIGHT))));
 	Util::Print("Avg draw secs = " + std::to_string(drawTime / ((float)frames * 1000.0f)));
 }
 
@@ -379,5 +385,6 @@ int main (int argc, char ** argv)
   glutIdleFunc(Idle);
   atexit(OnExit);
   glutKeyboardFunc(OnKeyDown);
+  startFrameTime = clock();
   glutMainLoop();
 }

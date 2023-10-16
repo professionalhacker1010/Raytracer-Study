@@ -100,6 +100,7 @@
     <ClInclude Include="glext.h" />
     <ClInclude Include="khrplatform.h" />
     <ClInclude Include="Light.h" />
+    <ClInclude Include="Mesh.h" />
     <ClInclude Include="Octree.h" />
     <ClInclude Include="picLibrary\pic.h" />
     <ClInclude Include="Quad.h" />
@@ -119,6 +120,7 @@
     <ClCompile Include="BVH.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Octree.cpp" />
     <ClCompile Include="Quad.cpp" />
     <ClCompile Include="RayCast.cpp" />

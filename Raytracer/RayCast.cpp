@@ -37,9 +37,11 @@ bool Ray::IntersectAABB(const Ray& ray, Vec3 minBounds, Vec3 maxBounds, float& o
 bool Ray::IntersectAABB_SIMD(const Ray& ray, const __m128 bmin4, const __m128 bmax4, float& out)
 {
 	//mask out the uint bc calculations on it are slow
-	static __m128 mask4 = _mm_cmpeq_ps(_mm_setzero_ps(), _mm_set_ps(1, 0, 0, 0)); 
-	__m128 t1 = _mm_mul_ps(_mm_sub_ps(_mm_and_ps(bmin4, mask4), ray.origin4), ray.dInv4);
-	__m128 t2 = _mm_mul_ps(_mm_sub_ps(_mm_and_ps(bmax4, mask4), ray.origin4), ray.dInv4);
+	//static __m128 mask4 = _mm_cmpeq_ps(_mm_setzero_ps(), _mm_set_ps(1, 0, 0, 0)); 
+	//__m128 t1 = _mm_mul_ps(_mm_sub_ps(_mm_and_ps(bmin4, mask4), ray.origin4), ray.dInv4);
+	//__m128 t2 = _mm_mul_ps(_mm_sub_ps(_mm_and_ps(bmax4, mask4), ray.origin4), ray.dInv4);
+	__m128 t1 = _mm_mul_ps(_mm_sub_ps(bmin4, ray.origin4), ray.dInv4);
+	__m128 t2 = _mm_mul_ps(_mm_sub_ps(bmax4, ray.origin4), ray.dInv4);
 	__m128 vmax4 = _mm_max_ps(t1, t2), vmin4 = _mm_min_ps(t1, t2);
 	float tmax = _mm_min_ps(
 		_mm_min_ps(vmax4, _mm_shuffle_ps(vmax4, vmax4, _MM_SHUFFLER(1, 1, 1, 1))),

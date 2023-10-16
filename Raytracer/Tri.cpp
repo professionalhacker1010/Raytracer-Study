@@ -24,7 +24,6 @@ bool Tri::CalculateIntersection(const Ray& ray, HitInfo& out) const
 	const float t = f * Vec3::Dot(edge2, q);
 	if (t > 0.0001f) {
 		out.distance = fmin(ray.maxDist, t);
-		out.triId = id - 1;
 		return true;
 	}
 	return false;

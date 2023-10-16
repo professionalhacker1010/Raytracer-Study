@@ -1,21 +1,25 @@
 #pragma once
 #include "AABB.h"
 #include "Constants.h"
+#include "Tri.h"
 #include <xmmintrin.h>
 #include <ctime>
 #include <atomic>
 
 struct Ray;
 struct HitInfo;
+class Tri;
 
 class BVH {
 public:
-	BVH(class Tri* triangles, unsigned int numTris);
+	BVH(Tri* triangles, unsigned int numTris);
 	~BVH();
 
 	void CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx = 0);
 	void Rebuild();
 	void Refit();
+
+	Tri tris[MAX_TRIANGLES];
 
 	//debug
 	void DebugTraversal(unsigned int idx);
@@ -52,8 +56,7 @@ private:
 	float SurfaceAreaHeuristic(const BVHNode& node, int axis, double splitPos); //brute force SAH calc
 
 	BVHNode* nodes;
-	class Tri* tris;
+	unsigned int* triIndices; //proxy for sorted tris, to avoid sorting the actual array
 	int nodeCounter = 0;
 	int numTris;
-	unsigned int* triIndices; //proxy for sorted tris, to avoid sorting the actual array
 };

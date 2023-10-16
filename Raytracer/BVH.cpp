@@ -1,5 +1,4 @@
 #include "BVH.h"
-#include "Tri.h"
 #include "util.h"
 #include "RayCast.h"
 
@@ -33,7 +32,9 @@ void BVH::DebugTraversal(unsigned int idx) {
 
 BVH::BVH(Tri* triangles, unsigned int numTris)
 {
-	tris = triangles;
+	for (int i = 0; i < numTris; i++) {
+		tris[i] = triangles[i];
+	}
 	nodes = new BVHNode[numTris * 2 - 1];
 	triIndices = new unsigned int[numTris];
 	this->numTris = numTris;
@@ -89,6 +90,7 @@ void BVH::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
 			for (unsigned int i = node->leftFirst; i < maxIdx; i++)
 			{
 				if (tris[triIndices[i]].CalculateIntersection(ray, out)) {
+					out.hit = &tris[triIndices[i]];
 					ray.maxDist = out.distance;
 				}
 				else falseBranch++;
@@ -136,8 +138,8 @@ void BVH::UpdateNodeBounds(unsigned int index)
 	for (unsigned int i = node.leftFirst; i < maxIdx; i++) {
 		Tri& tri = tris[triIndices[i]];
 		for (unsigned int j = 0; j < 3; j++) {
-			node.min = Vec3::Min(node.min, tri.verts[j].position);
-			node.max = Vec3::Max(node.max, tri.verts[j].position);
+			node.min = Vec3::Min(node.min, Vec3(tri.verts[j].position));
+			node.max = Vec3::Max(node.max, Vec3(tri.verts[j].position));
 		}
 	}
 
@@ -195,7 +197,6 @@ void BVH::Subdivide(unsigned int parentIdx)
 	//subdivide
 	Subdivide(leftChildIdx);
 	Subdivide(rightChildIdx);
-
 }
 
 void BVH::CalculateBestSplit(const BVHNode& parent, float& bestCost, float& bestSplitPos, int& bestAxis)
@@ -287,6 +288,7 @@ BVH::~BVH()
 {
 	delete[] nodes;
 	delete[] triIndices;
+	delete[] tris;
 }
 
 float BVH::SurfaceAreaHeuristic(const BVHNode& node, int axis, double splitPos)
