@@ -12,13 +12,13 @@ class BVH {
 public:
 	BVH(class Tri* triangles, unsigned int numTris);
 	~BVH();
-	void CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx = 0);
 
-	//old
-	void CalculateIntersection_Recursive(Ray& ray, HitInfo& out, unsigned int nodeIdx = 0);
+	void CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx = 0);
+	void Rebuild();
+	void Refit();
 
 	//debug
-	clock_t constructionTime;
+	void DebugTraversal(unsigned int idx);
 	std::atomic_int falseBranch = 0;
 private:
 	struct Bin {
@@ -42,25 +42,18 @@ private:
 		BVHNode() { min4 = max4 = _mm_set1_ps(0); }
 		bool IsLeaf() const { return numTris > 0; }
 	};
-
-	//look through tris in the node and update the AABB
-	void UpdateNodeBounds(unsigned int index);
-
-	//sort tris into subdivided spaces and create child BVHNodes
-	void Subdivide(unsigned int parentIdx);
+	
+	void UpdateNodeBounds(unsigned int index); //look through tris in the node and update the AABB
+	void Subdivide(unsigned int parentIdx); //sort tris into subdivided spaces and create child BVHNodes
 	void CalculateBestSplit(const BVHNode& parent, float& bestCost, float& bestSplitPos, int& bestAxis);
-
-	float SurfaceAreaHeuristic(const BVHNode& node, int axis, double splitPos);
-
 	int SortAlongAxis(const BVHNode& node, int axis, double splitPos);
 
-	void DebugTraversal(unsigned int idx);
-
 	//old
-	int MidpointSplit(unsigned int parentIdx);
+	float SurfaceAreaHeuristic(const BVHNode& node, int axis, double splitPos); //brute force SAH calc
 
 	BVHNode* nodes;
 	class Tri* tris;
-	int nodeCounter;
+	int nodeCounter = 0;
+	int numTris;
 	unsigned int* triIndices; //proxy for sorted tris, to avoid sorting the actual array
 };

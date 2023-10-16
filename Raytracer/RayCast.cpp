@@ -13,17 +13,25 @@ float Ray::CalculatePlaneIntersection(const Vec3& norm, const Ray& ray, const fl
 	return -(Vec3::Dot(norm, ray.origin) + d) / denom;
 }
 
-float Ray::IntersectAABB(const Ray& ray, Vec3 minBounds, Vec3 maxBounds)
+bool Ray::IntersectAABB(const Ray& ray, Vec3 minBounds, Vec3 maxBounds, float& out)
 {
-	float tx1 = (minBounds[0] - ray.origin[0]) * ray.dInv[0], tx2 = (maxBounds[0] - ray.origin[0]) * ray.dInv[0];
+	float tx1 = (minBounds[0] - ray.origin[0]) * ray.dInv[0];
+	float tx2 = (maxBounds[0] - ray.origin[0]) * ray.dInv[0];
 	float tmin = (float)fmin(tx1, tx2);
 	float tmax = (float)fmax(tx1, tx2);
-	float ty1 = (minBounds[1] - ray.origin[1]) * ray.dInv[1], ty2 = (maxBounds[1] - ray.origin[1]) * ray.dInv[1];
-	tmin = (float)fmax(tmin, fmin(ty1, ty2)), tmax = (float)fmin(tmax, fmax(ty1, ty2));
-	float tz1 = (minBounds[2] - ray.origin[2]) * ray.dInv[2], tz2 = (maxBounds[2] - ray.origin[2]) * ray.dInv[2];
-	tmin = (float)fmax(tmin, fmin(tz1, tz2)), tmax = (float)fmin(tmax, fmax(tz1, tz2));
-	if (tmax >= tmin && tmin < ray.maxDist && tmax > 0.0f) return tmin;
-	return -1;
+	float ty1 = (minBounds[1] - ray.origin[1]) * ray.dInv[1];
+	float ty2 = (maxBounds[1] - ray.origin[1]) * ray.dInv[1];
+	tmin = (float)fmax(tmin, fmin(ty1, ty2));
+	tmax = (float)fmin(tmax, fmax(ty1, ty2));
+	float tz1 = (minBounds[2] - ray.origin[2]) * ray.dInv[2];
+	float tz2 = (maxBounds[2] - ray.origin[2]) * ray.dInv[2];
+	tmin = (float)fmax(tmin, fmin(tz1, tz2));
+	tmax = (float)fmin(tmax, fmax(tz1, tz2));
+	if (tmax >= tmin && tmin < ray.maxDist && tmax > 0.0f) {
+		out = tmin;
+		return true;
+	}
+	return false;
 }
 
 bool Ray::IntersectAABB_SIMD(const Ray& ray, const __m128 bmin4, const __m128 bmax4, float& out)
@@ -41,8 +49,8 @@ bool Ray::IntersectAABB_SIMD(const Ray& ray, const __m128 bmin4, const __m128 bm
 		_mm_max_ps(vmin4, _mm_shuffle_ps(vmin4, vmin4, _MM_SHUFFLER(1, 1, 1, 1))),
 		_mm_max_ps(vmin4, _mm_shuffle_ps(vmin4, vmin4, _MM_SHUFFLER(2, 2, 2, 2)))
 	).m128_f32[0];
-	//float tmax = fmin(vmax4.m128_f32[0], fmin(vmax4.m128_f32[1], vmax4.m128_f32[2]));
-	//float tmin = fmax(vmin4.m128_f32[0], fmax(vmin4.m128_f32[1], vmin4.m128_f32[2]));
+	//float tmax = fminf(vmax4.m128_f32[0], fminf(vmax4.m128_f32[1], vmax4.m128_f32[2]));
+	//float tmin = fmaxf(vmin4.m128_f32[0], fmaxf(vmin4.m128_f32[1], vmin4.m128_f32[2]));
 	if (tmax >= tmin && tmin < ray.maxDist && tmax > 0.0f) {
 		out = tmin;
 		return true;

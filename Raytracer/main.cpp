@@ -10,7 +10,6 @@
 #include <math.h>
 #include <ctime>
 
-#include <map>
 #include "Util.h"
 #include "Tri.h"
 #include "Vector.h"
@@ -30,7 +29,8 @@ int mode = MODE_DISPLAY;
 
 unsigned char buffer[HEIGHT][WIDTH][3];
 
-Tri triangles[MAX_TRIANGLES];
+Tri tris[MAX_TRIANGLES];
+Tri trisAnim[MAX_TRIANGLES];
 Sphere spheres[MAX_SPHERES];
 Light lights[MAX_LIGHTS];
 Vec3 ambient_light;
@@ -42,19 +42,37 @@ int numLights = 0;
 Camera camera;
 RenderQuad* renderQuad;
 BVH* BVHeirarchy;
-
-struct Pixel {
-	Pixel() {}
-	Pixel(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
-		this->r = r; this->g = g; this->b = b; this->a = a;
-	}
-	uint8_t r{ 0 }, g{ 0 }, b{ 0 }, a{ 0 };
-};
 GLubyte pixelData[HEIGHT][WIDTH][3];
+
+float rotation = 0;
+float rotationSpeed = 0.5f;
+
+//debug
+int frames = 0;
+long int triIntersections = 0;
+clock_t totalTime = 0;
+clock_t raycastTime = 0;
+clock_t drawTime = 0;
+clock_t buildTime = 0;
+
+void Animate() {
+	if ((rotation += rotationSpeed) > 2.0f * PI) rotation -= 2.0f * PI;
+	float a = sinf(rotation) * 0.5f;
+	for (int i = 0; i < numTriangles; i++) {
+		for (int j = 0; j < 3; j++) {
+			Vec3 original = tris[i].verts[j].position;
+			float step = a * (original[1] - 0.2f) * 0.2f;
+			float x = original[0] * cosf(step) - original[1] * sinf(step);
+			float y = original[0] * sinf(step) + original[1] * cosf(step);
+			trisAnim[i].verts[j].position = Vec3(x, y, original[2]);
+			trisAnim[i].CachedCalculations();
+		}
+	}
+}
 
 bool Init()
 {
-	glutInitDisplayMode(GLUT_RGBA | GLUT_SINGLE);
+	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
 	glutInitWindowPosition(500, 0);
 	glutInitWindowSize(WIDTH, HEIGHT);
 	int window = glutCreateWindow("Ray Tracer");
@@ -75,38 +93,19 @@ bool Init()
 	Vec3 cameraDir(0., 0., -1.);
 	for (int i = 0; i < numTriangles; i++) {
 		// perpendicular distance from origin to plane
-		triangles[i].d = -Vec3::Dot(triangles[i].centroid - camera.position, triangles[i].normal);
+		tris[i].d = -Vec3::Dot(tris[i].centroid - camera.position, tris[i].normal);
+		trisAnim[i] = tris[i];
 	}
 
-	BVHeirarchy = new BVH(triangles, numTriangles);
+	BVHeirarchy = new BVH(trisAnim, numTriangles);
+	BVHeirarchy->Rebuild();
 	renderQuad = new RenderQuad();
 	return true;
-}
-
-Tri* BruteForceTris(Ray ray, HitInfo& closestTriHit, int ignoreID = 0) {
-	Tri* closestTri = nullptr;
-	for (int i = 0; i < numTriangles; i++) {
-		if (triangles[i].id == ignoreID) continue;
-		HitInfo hitInfo;
-		//if (octree->CalculateIntersection(ray, &hitInfo, -1)){
-		if (triangles[i].CalculateIntersection(ray, hitInfo)) {
-			//check if within raycast length
-			if (hitInfo.distance > ray.maxDist) continue;
-			//check if new closest sphere
-			if (!closestTri || hitInfo.distance < closestTriHit.distance) {
-				closestTri = &triangles[i];
-				closestTriHit.position = hitInfo.position;
-				closestTriHit.distance = hitInfo.distance;
-			}
-		}
-	}
-	return closestTri;
 }
 
 /// <summary>
 /// check if ray intersects with triangle or sphere, returns vertex at closest intersection point and id of hit object
 /// </summary>
-int debugRayCast = 0;
 int RayCast(Ray ray, Vertex& outVertex, int ignoreID = 0) {
 	// loop through every sphere
 	//Sphere* closestSphere = nullptr;
@@ -130,7 +129,7 @@ int RayCast(Ray ray, Vertex& outVertex, int ignoreID = 0) {
 	Tri* closestTri = nullptr;
 	HitInfo closestTriHit;
 	BVHeirarchy->CalculateIntersection(ray, closestTriHit);
-	if (closestTriHit.triId != -1) closestTri = &triangles[closestTriHit.triId];
+	if (closestTriHit.triId != -1) closestTri = &trisAnim[closestTriHit.triId];
 
 	//calculate normal for closest intersection (sphere or triangle)
 	//if (closestSphere && closestTri) {
@@ -204,13 +203,15 @@ Vec3 CastShadowRays(const Vertex& vertex, int ignoreID = 0) {
 	return color;
 }
 
-
 void DrawScene()
 {
-	clock_t totalTime = 0;
-	clock_t startDrawTime = clock();
+	Animate();
 
-	clock_t raycastTime = 0;
+	clock_t startBuildTime = clock();
+	BVHeirarchy->Refit();
+	buildTime += (clock() - startBuildTime);
+
+	clock_t startDrawTime = clock();
 
 	Vertex vert;
 	const int tileSize = 16;
@@ -218,37 +219,44 @@ void DrawScene()
 
 #pragma omp parallel for schedule(dynamic) reduction(+:raycastTime), private(y, u, v, i, vert)
 	for (x = 0; x < WIDTH; x+=tileSize) {
-//#pragma omp parallel for schedule(dynamic), private(u, v, i, vert)
 		for (y = 0; y < HEIGHT; y += tileSize) {
-			for (u = x; u < x + tileSize; u++) {
-//#pragma omp parallel for schedule(dynamic, 10), private(i, vert)
-				for (v = y; v < y + tileSize; v++) {
-					//if i used x and y here it gave a kinda cool pixellated effect lol
-					clock_t startRayTime = clock();
-					if (RayCast(camera.GetRay(u, v), vert)) {
-						// cast shadow ray
-						//Vec3 color = CastShadowRays(vert, hit);
-						Vec3 color = vert.color_diffuse * 255.0f;
-						for (i = 0; i < 3; i++) {
-							pixelData[v][u][i] = (GLubyte)(color[i]);
-						}
+			for (u = x; u < x + tileSize; u++) for (v = y; v < y + tileSize; v++) {
+				//if i used x and y here it gave a kinda cool pixellated effect lol
+				clock_t startRayTime = clock();
+				int hit = RayCast(camera.GetRay(u, v), vert);
+				raycastTime += (clock() - startRayTime);
+				if (hit) {
+					// cast shadow ray
+					//Vec3 color = CastShadowRays(vert, hit);
+					Vec3 color = vert.color_diffuse * 255.0f;
+					for (i = 0; i < 3; i++) {
+						pixelData[v][u][i] = (GLubyte)(color[i]);
 					}
-					raycastTime += (clock() - startRayTime);
 				}
+				else {
+					for (i = 0; i < 3; i++) {
+						pixelData[v][u][i] = (GLubyte)0;
+					}
+				}
+				
 			}
 		}
 	}
 
-	totalTime = (clock() - startDrawTime);
-	renderQuad->Draw(pixelData);
+	drawTime += (clock() - startDrawTime);
 
-	glFlush();
+	glutPostRedisplay();
 
-	Util::Print("Avg ms per raycast = " + std::to_string(raycastTime / (double)(WIDTH * HEIGHT)));
-	Util::Print("Total triangle intersections = " + std::to_string(triangles[0].debug()));
+	frames++;
+
+	int intersections = tris[0].debug();
+	triIntersections += intersections;
+	//Util::Print("Avg ms per raycast = " + std::to_string(raycastTime / (double)(WIDTH * HEIGHT)));
+	Util::Print("Total triangle intersections = " + std::to_string(intersections));
 	Util::Print("False intersections = " + std::to_string(BVHeirarchy->falseBranch));
-	Util::Print("Total draw secs = " + std::to_string((clock() - startDrawTime)/1000.0f));
-	Util::Print("BVH construction secs = " + std::to_string(BVHeirarchy->constructionTime/1000.0f));
+	BVHeirarchy->falseBranch = 0;
+	//Util::Print("Total draw secs = " + std::to_string(drawTime/1000.0f));
+	//Util::Print("BVH construction secs = " + std::to_string(buildTime/1000.0f));
 }
 
 bool LoadScene(char* argv)
@@ -275,12 +283,12 @@ bool LoadScene(char* argv)
 			//printf("found triangle\n");
 			t.ParseFromFile(file, i + 1);
 
-			if (numTriangles == MAX_TRIANGLES)
-			{
-				printf("too many triangles, you should increase MAX_TRIANGLES!\n");
-				return false;
-			}
-			triangles[numTriangles++] = t;
+			//if (numTriangles == MAX_TRIANGLES)
+			//{
+			//	printf("too many triangles, you should increase MAX_TRIANGLES!\n");
+			//	return false;
+			//}
+			tris[numTriangles++] = t;
 		}
 		else if (stricmp(type, "sphere") == 0)
 		{
@@ -319,29 +327,33 @@ bool LoadScene(char* argv)
 
 void Display()
 {
-	// Clear the screen
-	//glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	//glClear(GL_COLOR_BUFFER_BIT);
-
-
-	//	// Draw the fullscreen quad
-	//glUseProgram(shaderProgram);
-	//glBindVertexArray(VAO);
-	//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-	//glBindVertexArray(0);
-
-	//glutSwapBuffers();
+	renderQuad->Draw(pixelData);
+	glutSwapBuffers();
 }
 
 void Idle()
 {
+	clock_t startAnimTime = clock();
 	//hack to make it only draw once
 	static int once = 0;
-	if (!once)
+	//if (!once)
 	{
 		DrawScene();
 	}
 	once = 1;
+	totalTime += clock() - startAnimTime;
+}
+
+void OnKeyDown(unsigned char key, int x, int y) {
+	if (key == 'Q' || key == 'q') exit(0);
+}
+
+void OnExit() {
+	Util::Print("Avg FPS = " + std::to_string((float)frames / ((float)totalTime / 1000.0f)));
+	Util::Print("Avg BVH construction secs = " + std::to_string(buildTime / ((float)frames * 1000.0f)));
+	Util::Print("Avg tri intersections = " + std::to_string(triIntersections / (float)frames));
+	Util::Print("Avg ms per raycast = " + std::to_string(raycastTime / (float)(WIDTH * HEIGHT)));
+	Util::Print("Avg draw secs = " + std::to_string(drawTime / ((float)frames * 1000.0f)));
 }
 
 int main (int argc, char ** argv)
@@ -365,5 +377,7 @@ int main (int argc, char ** argv)
 
   glutDisplayFunc(Display);
   glutIdleFunc(Idle);
+  atexit(OnExit);
+  glutKeyboardFunc(OnKeyDown);
   glutMainLoop();
 }

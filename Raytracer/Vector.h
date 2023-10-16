@@ -78,6 +78,7 @@ struct Vec3 {
 	Vec3 Normalized() const { return Vec3(_mm_mul_ps(mC, _mm_rsqrt_ps(_mm_dp_ps(mC, mC, 0x77)))); }
 	void Set(float x, float y, float z) { mC = _mm_setr_ps(x, y, z, 0.0f); }
 	void Set(const Vec3& v) { mC = v.mC; }
+	Vec3 Abs() { return Vec3(_mm_max_ps(_mm_sub_ps(_mm_set_ps1(0.0f), mC), mC)); }
 
 	//constants
 	static Vec3 One() { return Vec3(1.); }

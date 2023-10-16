@@ -2,7 +2,6 @@
 #include "Tri.h"
 #include "util.h"
 #include "RayCast.h"
-#include <vector>
 
 bool debugPrint = true;
 bool debugColor = false;
@@ -34,11 +33,17 @@ void BVH::DebugTraversal(unsigned int idx) {
 
 BVH::BVH(Tri* triangles, unsigned int numTris)
 {
-	clock_t startTime = clock();
-
 	tris = triangles;
 	nodes = new BVHNode[numTris * 2 - 1];
 	triIndices = new unsigned int[numTris];
+	this->numTris = numTris;
+
+	if (debugPrint) Util::Print("Total tris in scene = " + std::to_string(numTris));
+}
+
+void BVH::Rebuild()
+{
+	clock_t startTime = clock();
 	for (unsigned int i = 0; i < numTris; i++) triIndices[i] = i;
 
 	BVHNode& root = nodes[0];
@@ -48,20 +53,25 @@ BVH::BVH(Tri* triangles, unsigned int numTris)
 	nodeCounter = 0;
 	UpdateNodeBounds(nodeCounter);
 	Subdivide(nodeCounter);
-	
-	constructionTime = clock() - startTime;
 
-	if (debugPrint) Util::Print("Total tris in scene = " + std::to_string(numTris));
 	if (debugPrint) Util::Print("Nodes generated = " + std::to_string(nodeCounter + 1));
 	//if (debugPrint) DebugTraversal(0);
 }
 
-BVH::~BVH()
+void BVH::Refit()
 {
-	delete[] nodes;
-	delete[] triIndices;
+	for (int i = nodeCounter - 1; i >= 0; i--) {
+		BVHNode& node = nodes[i];
+		if (node.numTris > 0) {
+			UpdateNodeBounds(i);
+			continue;
+		}
+		BVHNode& left = nodes[node.leftFirst];
+		BVHNode& right = nodes[node.leftFirst + 1];
+		node.min = Vec3::Min(left.min, Vec3(right.min));
+		node.max = Vec3::Max(left.max, Vec3(right.max));
+	}
 }
-
 
 void BVH::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
 {
@@ -113,23 +123,6 @@ void BVH::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
 			}
 			
 		}
-	}
-}
-
-void BVH::CalculateIntersection_Recursive(Ray& ray, HitInfo& out, unsigned int nodeIdx)
-{
-	const BVHNode& node = nodes[nodeIdx];
-	float dist;
-	if (!Ray::IntersectAABB_SIMD(ray, node.min4, node.max4, dist)) return;
-	if (node.IsLeaf()) {
-		for (unsigned int i = node.leftFirst; i < node.numTris + node.leftFirst; i++) 
-		{
-			if (tris[triIndices[i]].CalculateIntersection(ray, out)) out.triId = triIndices[i];
-		}
-	}
-	else {
-		CalculateIntersection(ray, out, node.leftFirst);
-		CalculateIntersection(ray, out, node.leftFirst + 1);
 	}
 }
 
@@ -215,7 +208,7 @@ void BVH::CalculateBestSplit(const BVHNode& parent, float& bestCost, float& best
 	int axis = 0;
 	if (extents[1] > extents[0]) axis = 1;
 	if (extents[3] > extents[axis]) axis = 2;
-	//for (int axis = 0; axis < 3; axis++) {
+	for (int axis = 0; axis < 3; axis++) {
 
 		//fit the min and max bounds on the selected axis
 		float minBound = parent.max[axis], maxBound = parent.min[axis];
@@ -255,6 +248,7 @@ void BVH::CalculateBestSplit(const BVHNode& parent, float& bestCost, float& best
 			rightArea[SPLIT_PLANES - 1 - i] = rightBin.Area();
 		}
 
+		//find the best SA heuristic
 		for (unsigned int i = 0; i < SPLIT_PLANES; i++) {
 			float splitPos = minBound + (float)(i + 1) * step;
 			//based on splitPos and axis, calculate SA of resulting AABB's
@@ -265,7 +259,34 @@ void BVH::CalculateBestSplit(const BVHNode& parent, float& bestCost, float& best
 				bestAxis = axis;
 			}
 		}
-	//}
+	}
+}
+
+int BVH::SortAlongAxis(const BVHNode& node, int axis, double splitPos)
+{
+	//split the tris into two groups, and sort along the way. Works like QuickSort
+	int splitIdx = node.leftFirst;
+	int maxIdx = node.leftFirst + node.numTris;
+	while (splitIdx < maxIdx) {
+		Vec3 centroid = tris[triIndices[splitIdx]].centroid;
+		if (centroid[axis] < splitPos) {
+			splitIdx++;
+		}
+		else {
+			unsigned int temp = triIndices[splitIdx];
+			triIndices[splitIdx] = triIndices[maxIdx - 1];
+			triIndices[maxIdx - 1] = temp;
+			maxIdx--;
+		}
+	}
+
+	return splitIdx;
+}
+
+BVH::~BVH()
+{
+	delete[] nodes;
+	delete[] triIndices;
 }
 
 float BVH::SurfaceAreaHeuristic(const BVHNode& node, int axis, double splitPos)
@@ -295,41 +316,4 @@ float BVH::SurfaceAreaHeuristic(const BVHNode& node, int axis, double splitPos)
 	}
 	if (leftTris > 0 && rightTris > 0) return cost;
 	else return FLT_MAX;
-}
-
-int BVH::MidpointSplit(unsigned int parentIdx)
-{
-	BVHNode& parent = nodes[parentIdx];
-
-	//split along longest axis
-	Vec3 extents = parent.max - parent.min;
-	int axis = 0;
-	if (extents[1] > extents[0]) axis = 1;
-	if (extents[3] > extents[axis]) axis = 2;
-
-	//get midpoint of the chosen axis
-	double splitPos = parent.min[axis] + extents[axis] * 0.5;
-
-	return SortAlongAxis(parent, axis, splitPos);
-}
-
-int BVH::SortAlongAxis(const BVHNode& node, int axis, double splitPos)
-{
-	//split the tris into two groups, and sort along the way. Works like QuickSort
-	int splitIdx = node.leftFirst;
-	int maxIdx = node.leftFirst + node.numTris;
-	while (splitIdx < maxIdx) {
-		Vec3 centroid = tris[triIndices[splitIdx]].centroid;
-		if (centroid[axis] < splitPos) {
-			splitIdx++;
-		}
-		else {
-			unsigned int temp = triIndices[splitIdx];
-			triIndices[splitIdx] = triIndices[maxIdx - 1];
-			triIndices[maxIdx - 1] = temp;
-			maxIdx--;
-		}
-	}
-
-	return splitIdx;
 }

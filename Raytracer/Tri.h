@@ -29,8 +29,8 @@ public:
 	int id;
 
 	unsigned int dimOne = 0, dimTwo = 1;
-	float proj1[2], proj2[2], proj3[2];
+	Vec3 edge1, edge2;
+	//float proj1[2], proj2[2], proj3[2];
 
-private:
 	void CachedCalculations();
 };

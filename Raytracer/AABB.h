@@ -21,11 +21,12 @@ struct AABB {
 
 	float Area() {
 		Vec3 diff = max - min;
-		float edge1 = (float)fabs(diff[0]);
-		float edge2 = (float)fabs(diff[1]);
-		float edge3 = (float)fabs(diff[2]);
-		//return _mm_dp_ps(_mm_set_ps(edge1, edge1, edge2, 0.0f), _mm_set_ps(edge2, edge3, edge3, 0.0f), 0x71).m128_f32[0] * 2.0f;
-		return 2.0f * ((edge1 * edge2) + (edge1 * edge3) + (edge2 * edge3));
+		Vec3 abs = diff.Abs();
+		return _mm_mul_ps(_mm_dp_ps(_mm_set_ps(abs[0], abs[0], abs[1], 0.0f), _mm_set_ps(abs[1], abs[2], abs[2], 0.0f), 0x71), _mm_set_ps1(2.0f)).m128_f32[0];
+		//float edge1 = (float)fabs(diff[0]);
+		//float edge2 = (float)fabs(diff[1]);
+		//float edge3 = (float)fabs(diff[2]);
+		//return 2.0f * ((edge1 * edge2) + (edge1 * edge3) + (edge2 * edge3));
 	}
 
 	Vec3 min, max;

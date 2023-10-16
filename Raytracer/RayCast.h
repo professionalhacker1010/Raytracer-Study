@@ -34,11 +34,11 @@ struct Ray {
 	}
 
 	static float CalculatePlaneIntersection(const Vec3& norm, const Ray& ray, const float d);
-	static float IntersectAABB(const Ray& ray, Vec3 minBounds, Vec3 maxBounds);
+	static bool IntersectAABB(const Ray& ray, Vec3 minBounds, Vec3 maxBounds, float& out);
 	static bool IntersectAABB_SIMD(const Ray& ray, const __m128 bmin4, const __m128 bmax4, float& out);
 
-	union { struct { Vec3 origin; float pad0; }; __m128 origin4; };
+	union { struct { Vec3 origin; float maxDist; }; __m128 origin4; };
 	union { struct { Vec3 direction; float pad1; }; __m128 direction4; };
 	union { struct { Vec3 dInv; float pad2; }; __m128 dInv4; };
-	float maxDist;
+	
 };

@@ -9,8 +9,8 @@ bool Tri::CalculateIntersection(const Ray& ray, HitInfo& out) const
 {
 	intersectionChecks++;
 
-	const Vec3 edge1 = verts[1].position - verts[0].position;
-	const Vec3 edge2 = verts[2].position - verts[0].position;
+	//const Vec3 edge1 = verts[1].position - verts[0].position;
+	//const Vec3 edge2 = verts[2].position - verts[0].position;
 	const Vec3 h = Vec3::Cross(ray.direction, edge2);
 	const float a = Vec3::Dot(edge1, h);
 	if (a > -0.0001f && a < 0.0001f) return false; // ray parallel to triangle
@@ -96,28 +96,31 @@ void Tri::ParseFromFile(FILE* file, int id)
 
 int Tri::debug()
 {
-	return intersectionChecks;
+	int retVal = intersectionChecks;
+	intersectionChecks = 0;
+	return retVal;
 }
 
 void Tri::CachedCalculations()
 {
+	edge1 = verts[1].position - verts[0].position;
+	edge2 = verts[2].position - verts[0].position;
+
 	//plane normal
-	Vec3 planeVec1 = verts[1].position - verts[0].position;
-	Vec3 planeVec2 = verts[2].position - verts[1].position;
-	normal = Vec3::Cross(planeVec1, planeVec2);
+	normal = Vec3::Cross(edge1, edge2);
 	normal.Normalize();
 
-	centroid = (verts[0].position + verts[1].position + verts[2].position) * (1.0f / 3.0f);
+	centroid = (verts[0].position + verts[1].position + verts[2].position) / 3.0f;
 
-	if (Util::doubleCompare(verts[0].position[0], verts[1].position[0]) && Util::doubleCompare(verts[0].position[0], verts[2].position[0])) {
-		dimOne = 2;
-	}
-	else if (Util::doubleCompare(verts[0].position[1], verts[1].position[1]) && Util::doubleCompare(verts[0].position[1], verts[2].position[1])) {
-		dimTwo = 2;
-	}
-	proj1[0] = verts[0].position[dimOne]; proj1[1] = verts[0].position[dimTwo];
-	proj2[0] = verts[1].position[dimOne]; proj2[1] = verts[1].position[dimTwo];
-	proj3[0] = verts[2].position[dimOne]; proj3[1] = verts[2].position[dimTwo];
+	//if (Util::doubleCompare(verts[0].position[0], verts[1].position[0]) && Util::doubleCompare(verts[0].position[0], verts[2].position[0])) {
+	//	dimOne = 2;
+	//}
+	//else if (Util::doubleCompare(verts[0].position[1], verts[1].position[1]) && Util::doubleCompare(verts[0].position[1], verts[2].position[1])) {
+	//	dimTwo = 2;
+	//}
+	//proj1[0] = verts[0].position[dimOne]; proj1[1] = verts[0].position[dimTwo];
+	//proj2[0] = verts[1].position[dimOne]; proj2[1] = verts[1].position[dimTwo];
+	//proj3[0] = verts[2].position[dimOne]; proj3[1] = verts[2].position[dimTwo];
 
 	//perpendicular distance from origin to plane
 	//d = -Vec3::Dot(verts[0].position - cameraPos, normal);
