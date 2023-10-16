@@ -205,7 +205,7 @@ void BVH::CalculateBestSplit(const BVHNode& parent, float& bestCost, float& best
 	const int SPLIT_PLANES = 4;
 
 	//split along longest axis
-	Vec3 extents = parent.max - parent.min;
+	Vec3 extents = Vec3(parent.max) - Vec3(parent.min);
 	int axis = 0;
 	if (extents[1] > extents[0]) axis = 1;
 	if (extents[3] > extents[axis]) axis = 2;

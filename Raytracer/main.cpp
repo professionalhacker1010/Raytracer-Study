@@ -12,7 +12,7 @@
 
 #include "Util.h"
 #include "Tri.h"
-#include "Vector.h"
+#include "Math.h"
 #include "Vertex.h"
 #include "Sphere.h"
 #include "RayCast.h"
@@ -40,13 +40,17 @@ int numSpheres= 0;
 int numLights = 0;
 
 Camera camera;
+
 constexpr int NUM_MESHES = 1;
 Mesh* meshes[NUM_MESHES];
+
 constexpr int NUM_MESH_INST = 2;
-Vec3 meshPositions[2] = {
+Vec3 meshPositions[NUM_MESH_INST] = {
 	Vec3(0.0f, 1.0f, 0.0f),
 	Vec3(0.0f, -1.0f, 0.0f)
 };
+Mat4 mesInvTransforms[NUM_MESH_INST];
+AABB meshBounds[NUM_MESH_INST];
 
 RenderQuad* renderQuad;
 GLubyte pixelData[HEIGHT][WIDTH][3];

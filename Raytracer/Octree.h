@@ -1,7 +1,7 @@
 #pragma once
 #include <map>
 #include "util.h"
-#include "Vector.h"
+#include "Math.h"
 #include "Tri.h"
 #include "Constants.h"
 

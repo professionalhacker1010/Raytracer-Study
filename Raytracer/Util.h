@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Vector.h"
+#include "Math.h"
 #include <string>
 #include <smmintrin.h>
 #include "Constants.h"

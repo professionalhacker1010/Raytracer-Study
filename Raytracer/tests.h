@@ -1,5 +1,5 @@
 #pragma once
-#include "Vector.h"
+#include "Math.h"
 #include "util.h"
 #include <string>
 
@@ -44,7 +44,7 @@ struct Vec3Test {
 		v1.Normalize();
 		Util::Print("normalize " + (std::string)v1);
 
-		Util::Print("Magnitude " + std::to_string(v1.Magnitude()));
+		Util::Print("Magnitude " + std::to_string(v1.Length()));
 
 		//pointers
 		Vec3* p1 = new Vec3(1., 2., 3.);

@@ -113,13 +113,14 @@
     <ClInclude Include="tests.h" />
     <ClInclude Include="Tri.h" />
     <ClInclude Include="Util.h" />
-    <ClInclude Include="Vector.h" />
+    <ClInclude Include="Math.h" />
     <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BVH.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Math.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Octree.cpp" />
     <ClCompile Include="Quad.cpp" />
