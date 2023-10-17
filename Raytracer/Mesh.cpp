@@ -10,7 +10,6 @@ Mesh::Mesh(Tri* triangles, int numTriangles, int meshId) {
 		tris[i] = triangles[i];
 	}
 	id = meshId;
-	//bvh.Set(tris, numTriangles);
 }
 
 Mesh::~Mesh()

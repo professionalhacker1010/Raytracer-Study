@@ -92,12 +92,13 @@ bool Init()
 	}
 
 	tlas = new TLAS(bvh, meshInstances, NUM_MESH_INST);
-	tlas->Rebuild();
 
 	for (int i = 0; i < NUM_MESH_INST; i++) {
 		if (i == 0) meshInstances[i]->SetTransform(Mat4::CreateTranslation(Vec3(0.0f, 1.0f, 0.0f)));
 		else if (i == 1) meshInstances[i]->SetTransform(Mat4::CreateTranslation(Vec3(0.0f, -1.0f, 0.0f)));
 	}
+
+	tlas->Rebuild();
 
 	renderQuad = new RenderQuad();
 	return true;
@@ -128,11 +129,6 @@ int RayCast(Ray ray, Vertex& outVertex, int ignoreID = 0) {
 	//step through bvh for triangles
 	Tri* closestTri = nullptr;
 	HitInfo closestTriHit;
-	//for (int i = 0; i < NUM_MESH_INST; i++) {
-	//	MeshInstance& meshInst = *meshInstances[i];
-	//	ray.origin = Camera::Get().position + meshInst.invTransform.GetTranslation();
-	//	meshInst.meshRef->bvh.CalculateIntersection(ray, closestTriHit);
-	//}
 	tlas->CalculateIntersection(ray, closestTriHit);
 	closestTri = closestTriHit.hit;
 
@@ -223,13 +219,14 @@ void DrawScene()
 	for (int i = 0; i < NUM_MESHES; i++) {
 		bvh[i]->Refit();
 	}
+	tlas->Rebuild();
 	c = clock();
 	buildTime += (c - startBuildTime);
 
 	clock_t startDrawTime = c;
 
 	Vertex vert;
-	const int tileSize = 8;
+	const int tileSize = 4;
 	int x, y, u, v, i;
 
 #pragma omp parallel for schedule(dynamic) reduction(+:raycastTime), private(y, u, v, i, vert)

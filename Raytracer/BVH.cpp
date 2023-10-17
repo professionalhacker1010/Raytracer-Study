@@ -220,7 +220,7 @@ void BVH::CalculateBestSplit(const BVHNode& parent, float& bestCost, float& best
 	const int SPLIT_PLANES = 4;
 
 	//split along longest axis
-	Vec3 extents = Vec3(parent.max) - Vec3(parent.min);
+	Vec3 extents = parent.max - parent.min;
 	int axis = 0;
 	if (extents[1] > extents[0]) axis = 1;
 	if (extents[3] > extents[axis]) axis = 2;
@@ -325,12 +325,14 @@ void BVHInstance::Set(BVH* bvHeirarchy, MeshInstance* meshInstance)
 	mesh = meshInstance;
 	mesh->OnTransformSet = [this](Mat4 transform) {
 		worldSpaceBounds = AABB(Vec3(FLT_MAX), Vec3(-FLT_MAX));
+		invTransform = transform;
+		invTransform.Invert();
 		for (int i = 0; i < 8; i++) {
 			worldSpaceBounds.Grow(Mat4::Transform(
 				Vec3(
-					i & 1 ? bvh->GetBounds().max[0] : bvh->GetBounds().min[0],
-					i & 2 ? bvh->GetBounds().max[1] : bvh->GetBounds().min[1],
-					i & 4 ? bvh->GetBounds().max[2] : bvh->GetBounds().min[2]
+					i % 2 == 0 ? bvh->GetBounds().max[0] : bvh->GetBounds().min[0],
+					(i % 4) < 2 ? bvh->GetBounds().max[1] : bvh->GetBounds().min[1],
+					i < 4 ? bvh->GetBounds().max[2] : bvh->GetBounds().min[2]
 				),
 				transform
 			));
@@ -344,30 +346,75 @@ TLAS::TLAS(BVH** bvhList, MeshInstance** meshInstances, int numMeshInstances)
 	for (int i = 0; i < numMeshInstances; i++) {
 		blas[i].Set(bvhList[meshInstances[i]->meshRef->id], meshInstances[i]);
 	}
-	//meshes = meshInstances;
-	//meshIndices = new int[numMeshInstances];
-	//for (int i = 0; i < numBVH; i++) {
-	//	blas[i].bvh = &(meshes[i]->meshRef->id);
-	//	blas[i].meshInstance = meshes[i];
-	//}
-	//blas = bvhList;
 	numBLAS = numMeshInstances;
 	nodes = (TLASNode*)_aligned_malloc(sizeof(TLASNode) * 2 * numMeshInstances, 64);
-	numNodes = numMeshInstances * 2; //for now
+	cam = &Camera::Get();
 }
 
 void TLAS::Rebuild() {
-	nodes[0].min = Vec3(-100.0f);
-	nodes[0].max = Vec3(100.0f);
-	nodes[0].leftBLAS = 2;
-	nodes[0].isLeaf = false;
+	//proxy for indices of all TLASNodes remaining to be matched up
+	unsigned int* tlasIndices = new unsigned int[numBLAS];
 
-	for (int i = 2; i < numBLAS * 2; i++) {
-		nodes[i].min = Vec3(-100.0f);
-		nodes[i].max = Vec3(100.0f);
-		nodes[i].leftBLAS = i - 2;
-		nodes[i].isLeaf = true;
+	//initailize all nodes as leaf nodes
+	numNodes = 2;
+	for (unsigned int i = 0; i < numBLAS; i++) {
+		nodes[numNodes].min = blas[i].worldSpaceBounds.min;
+		nodes[numNodes].max = blas[i].worldSpaceBounds.max;
+		nodes[numNodes].BLAS = i;
+		nodes[numNodes].leftRight = 0;
+		numNodes++;
+		tlasIndices[i] = i + 2;
 	}
+
+	//use agglomerative clustering to build the TLAS (bottom->up)
+	int nodesLeft = numBLAS;
+	int a = 1, b = FindBestMatch(tlasIndices, nodesLeft, a);
+	while (nodesLeft > 1) {
+		int c = FindBestMatch(tlasIndices, nodesLeft, b);
+
+		//best match found between a and b
+		if (a == c) {
+			int idxA = tlasIndices[a], idxB = tlasIndices[b];
+
+			//add new node to the tree, A points to the new node
+			TLASNode& nodeA = nodes[idxA];
+			TLASNode& nodeB = nodes[idxB];
+			TLASNode& newNode = nodes[numNodes];
+			unsigned int tempBLAS = newNode.BLAS;
+			newNode.min = Vec3::Min(nodeA.min, nodeB.min);
+			newNode.max = Vec3::Max(nodeA.max, nodeB.max);
+			newNode.leftRight = idxA + (idxB << 16);
+			newNode.BLAS = tempBLAS;
+			tlasIndices[a] = numNodes++;
+
+			//B is matched so replace with the last node and shorten the number of nodes remaining to be matched
+			nodesLeft--;
+			tlasIndices[b] = tlasIndices[nodesLeft];
+
+			//now find the best match for the new node A
+			b = FindBestMatch(tlasIndices, nodesLeft, a);
+		}
+		//b is best for a, but a is not best for b. keep searching
+		else {
+			a = b;
+			b = c;
+		}
+	}
+	nodes[0].min4 = nodes[tlasIndices[a]].min4;
+	nodes[0].max4 = nodes[tlasIndices[a]].max4;
+	//Util::Print("TLAS nodes " + std::to_string(numNodes));
+	//for (int i = 0; i < numNodes; i++) {
+	//	if (nodes[i].leftRight == 0) {
+	//		Util::Print("node " + std::to_string(i) + " is leaf " + std::to_string(nodes[i].leftRight));
+	//		Util::Print("min " + (std::string)nodes[i].min + " max " + (std::string)nodes[i].max);
+	//	}
+	//	else {
+	//		short left = (nodes[i].leftRight & 0xffff);
+	//		short right = (nodes[i].leftRight >> 16);
+	//		Util::Print("node " + std::to_string(i) + " is interior " + std::to_string(left) + " " + std::to_string(right));
+	//		Util::Print("min " + (std::string)nodes[i].min + " max " + (std::string)nodes[i].max);
+	//	}
+	//}
 }
 
 bool TLAS::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx) {
@@ -376,11 +423,10 @@ bool TLAS::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx) {
 	bool hasHit = false;
 	while (true)
 	{
-		if (node->isLeaf)
+		if (node->leftRight == 0)
 		{
-			BVHInstance& bvhInstance = blas[node->leftBLAS];
-			//MeshInstance& mesh = *meshes[node->leftBLAS];
-			ray.origin = Camera::Get().position + bvhInstance.mesh->invTransform.GetTranslation();
+			BVHInstance& bvhInstance = blas[node->BLAS];
+			ray.origin = cam->position + bvhInstance.invTransform.GetTranslation();
 			if (bvhInstance.bvh->CalculateIntersection(ray, out, 0)) {
 				ray.maxDist = out.distance;
 				hasHit = true;
@@ -389,12 +435,12 @@ bool TLAS::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx) {
 			else node = stack[--stackIdx];
 			continue;
 		}
-		left = &nodes[node->leftBLAS];
-		right = &nodes[node->leftBLAS + 1];
+		left = &nodes[(node->leftRight & 0xffff)];
+		right = &nodes[(node->leftRight >> 16)];
 
 		float leftDist = FLT_MAX, rightDist = FLT_MAX;
-		Ray::IntersectAABB(ray, left->min, left->max, leftDist);
-		Ray::IntersectAABB(ray, right->min, right->max, rightDist);
+		Ray::IntersectAABB_SIMD(ray, left->min4, left->max4, leftDist);
+		Ray::IntersectAABB_SIMD(ray, right->min4, right->max4, rightDist);
 
 		//intersect with neither 
 		if (leftDist == FLT_MAX && rightDist == FLT_MAX)
@@ -419,3 +465,7 @@ bool TLAS::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx) {
 }
 
 
+TLAS::~TLAS() {
+	delete[] blas;
+	delete[] nodes;
+}

@@ -13,6 +13,6 @@ public:
 
 	void SetTransform(Mat4 transform);
 	std::function<void(Mat4 transform)> OnTransformSet;
-	Mat4 invTransform;
+	Mat4 transform;
 	Mesh* meshRef;
 };

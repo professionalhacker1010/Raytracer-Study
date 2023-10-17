@@ -10,6 +10,7 @@ struct Ray;
 struct HitInfo;
 class Tri;
 class MeshInstance;
+class Camera;
 
 struct BVHNode {
 	union {
@@ -48,29 +49,31 @@ private:
 	void CalculateBestSplit(const BVHNode& parent, float& bestCost, float& bestSplitPos, int& bestAxis);
 	int SortAlongAxis(const BVHNode& node, int axis, double splitPos);
 
-	BVHNode* nodes;
-	Tri* tris;
+	BVHNode* nodes; //nodes created in order s.t. right and left nodes next to each other, top->bottom
+	Tri* tris; //not sorted
 	unsigned int* triIndices; //proxy for sorted tris, to avoid sorting the actual array
-	int numNodes = 0;
-	int numTris;
+	int numNodes = 0, numTris;
 };
 
 struct BVHInstance {
-	BVHInstance() {}
+	BVHInstance() = default;
 	BVHInstance(BVH* bvHeirarchy, MeshInstance* meshInstance);
 	void Set(BVH* bvHeirarchy, MeshInstance* meshInstance);
 	BVH* bvh;
 	MeshInstance* mesh;
 	AABB worldSpaceBounds;
+	Mat4 invTransform;
 };
 
 struct TLASNode {
 	union {
-		struct { Vec3 min; unsigned int leftBLAS; };
+		Vec3 min;
+		struct { float pad0, pad1, pad2; unsigned int leftRight; };
 		__m128 min4;
 	};
 	union {
-		struct { Vec3 max; unsigned int isLeaf; };
+		Vec3 max;
+		struct { float pad3, pad4, pad5; unsigned int BLAS; };
 		__m128 max4;
 	};
 };
@@ -79,13 +82,29 @@ class TLAS {
 public:
 	TLAS() = default;
 	TLAS(BVH** bvhList, MeshInstance** meshInstances, int numMeshInstances);
+	~TLAS();
+
 	void Rebuild();
 	bool CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx = 0);
-
+	
 private:
-	TLASNode* nodes;
-	BVHInstance* blas;
-	//MeshInstance** meshes;
-	//BVH** blas;
-	unsigned int numNodes, numBLAS;
+	int FindBestMatch(unsigned int* indices, int numNodes, int a) {
+		float smallest = FLT_MAX;
+		int bestB = -1;
+		for (int b = 0; b < numNodes; b++) if (b != a) {
+			AABB extents;
+			extents.max = Vec3::Max(nodes[indices[a]].max, nodes[indices[b]].max);
+			extents.min = Vec3::Min(nodes[indices[a]].min, nodes[indices[b]].min);
+			float surfaceArea = extents.Area();
+			if (surfaceArea < smallest) {
+				smallest = surfaceArea;
+				bestB = b;
+			}
+		}
+		return bestB;
+	}
+	Camera* cam;
+	TLASNode* nodes; //nodes created in order s.t. all leaf nodes come first -> go towards root node
+	BVHInstance* blas; //bottom-level acceleration structures, not sorted
+	unsigned int numNodes = 0, numBLAS;
 };
