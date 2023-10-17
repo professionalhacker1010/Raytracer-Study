@@ -22,8 +22,9 @@ bool Tri::CalculateIntersection(const Ray& ray, HitInfo& out) const
 	const float v = f * Vec3::Dot(ray.direction, q);
 	if (v < 0 || u + v > 1) return false;
 	const float t = f * Vec3::Dot(edge2, q);
+	if (t > ray.maxDist) return false;
 	if (t > 0.0001f) {
-		out.distance = fmin(ray.maxDist, t);
+		out.distance = t;
 		return true;
 	}
 	return false;
@@ -84,7 +85,9 @@ void Tri::ParseFromFile(FILE* file, int id)
 		Util::parse_doubles(file, "nor:", verts[i].normal);
 		Util::parse_doubles(file, "dif:", verts[i].color_diffuse);
 		Util::parse_doubles(file, "spe:", verts[i].color_specular);
-		Util::parse_shi(file, &verts[i].shininess);
+		double tempShi;
+		Util::parse_shi(file, &tempShi);
+		verts[i].shininess = (float)tempShi;
 	}
 
 	this->id = id;
@@ -110,6 +113,9 @@ void Tri::CachedCalculations()
 	normal.Normalize();
 
 	centroid = (verts[0].position + verts[1].position + verts[2].position) / 3.0f;
+
+	//	// perpendicular distance from origin to plane
+	//	d = -Vec3::Dot(centroid - camera.position, normal);
 
 	//if (Util::doubleCompare(verts[0].position[0], verts[1].position[0]) && Util::doubleCompare(verts[0].position[0], verts[2].position[0])) {
 	//	dimOne = 2;

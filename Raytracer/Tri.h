@@ -6,7 +6,7 @@ struct HitInfo;
 
 class Tri {
 public:
-	Tri() { }
+	Tri() = default;
 
 	/// <summary>
 	/// whether the ray hits the triangle, at what distance and barycentric coords
@@ -27,7 +27,7 @@ public:
 	Vec3 normal;
 	Vec3 edge1, edge2;
 	//float d;
-	int id;
+	int id = 0;
 
 	//unsigned int dimOne = 0, dimTwo = 1;
 	

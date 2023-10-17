@@ -8,7 +8,7 @@ struct Mat4;
 struct Vec3 {
     friend Mat4;
 	Vec3() { mC = _mm_setzero_ps(); }
-	explicit Vec3(float x, float y, float z) { mC = _mm_setr_ps(x, y, z, 0.0f); }
+	explicit Vec3(float x, float y, float z) { mC = _mm_setr_ps(x, y, z, pad0); }
 	Vec3(const Vec3& v) { mC = v.mC; }
 	explicit Vec3(float val) { mC = _mm_set_ps1(val); }
 	explicit Vec3(__m128 v) { mC = v; }
@@ -115,8 +115,6 @@ private:
 		struct { float c[3]; float pad0; };
 	};
 };
-
-//typedef Quaternion : Vec4;
 
 struct Vec4
 {
@@ -250,6 +248,8 @@ public:
     static const Vec4 UnitW;
     static const Vec4 Identity;
 };
+
+typedef Vec4 Quaternion;
 
 struct Mat4 {
 public:

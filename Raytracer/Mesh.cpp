@@ -1,15 +1,21 @@
 #include "Mesh.h"
-#include "BVH.h"
+#include "Camera.h"
 
-Mesh::Mesh(Tri* triangles, int numTriangles) {
+Mesh::Mesh(Tri* triangles, int numTriangles, int meshId) {
 	bindPoseTris = triangles;
 	numTris = numTriangles;
-	bvh = new BVH(triangles, numTriangles);
+	
+	tris = (Tri*)_aligned_malloc(sizeof(Tri) * numTris, 64);
+	for (int i = 0; i < numTris; i++) {
+		tris[i] = triangles[i];
+	}
+	id = meshId;
+	//bvh.Set(tris, numTriangles);
 }
 
 Mesh::~Mesh()
 {
-	//delete[] tris;
+	delete[] tris;
 }
 
 void Mesh::Animate(float deltaTime)
@@ -22,8 +28,8 @@ void Mesh::Animate(float deltaTime)
 			float step = a * (original[1] - 0.2f) * 0.2f;
 			float x = original[0] * cosf(step) - original[1] * sinf(step);
 			float y = original[0] * sinf(step) + original[1] * cosf(step);
-			bvh->tris[i].verts[j].position = Vec3(x, y, original[2]);
-			bvh->tris[i].CachedCalculations();
+			tris[i].verts[j].position = Vec3(x, y, original[2]);
+			tris[i].CachedCalculations();
 		}
 	}
 }

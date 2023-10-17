@@ -5,7 +5,10 @@
 
 class Camera {
 public:
-	Camera();
+	static Camera& Get() {
+		static Camera instance;
+		return instance;
+	}
 	Ray GetRay(unsigned int x, unsigned int y);
 	Vec3 position;
 	Vec3 rayDirections[WIDTH][HEIGHT];
@@ -13,4 +16,9 @@ public:
 	void UpdateRays();
 	Ray rays[WIDTH][HEIGHT];
 
+private:
+	Camera();
+public:
+	Camera(Camera const&) = delete;
+	void operator=(Camera const&) = delete;
 };

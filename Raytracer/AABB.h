@@ -10,8 +10,8 @@ struct AABB {
 	}
 
 	void Grow(Vec3 point) {
-		max = Vec3::Max(point, max);
-		min = Vec3::Min(point, min);
+		max = Vec3::Max(max, point);
+		min = Vec3::Min(min, point);
 	}
 
 	void Grow(AABB& aabb) {

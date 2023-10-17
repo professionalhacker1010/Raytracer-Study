@@ -23,12 +23,11 @@
 #include "BVH.h"
 #include "RenderQuad.h"
 #include "Mesh.h"
+#include "MeshInstance.h"
 
 char* filename = 0;
 
 int mode = MODE_DISPLAY;
-
-unsigned char buffer[HEIGHT][WIDTH][3];
 
 Tri tris[MAX_TRIANGLES];
 Sphere spheres[MAX_SPHERES];
@@ -39,18 +38,16 @@ int numTriangles = 0;
 int numSpheres= 0;
 int numLights = 0;
 
-Camera camera;
+//scene
+//Camera camera;
+TLAS* tlas;
 
 constexpr int NUM_MESHES = 1;
+BVH* bvh[NUM_MESHES];
 Mesh* meshes[NUM_MESHES];
 
 constexpr int NUM_MESH_INST = 2;
-Vec3 meshPositions[NUM_MESH_INST] = {
-	Vec3(0.0f, 1.0f, 0.0f),
-	Vec3(0.0f, -1.0f, 0.0f)
-};
-Mat4 mesInvTransforms[NUM_MESH_INST];
-AABB meshBounds[NUM_MESH_INST];
+MeshInstance* meshInstances[NUM_MESH_INST];
 
 RenderQuad* renderQuad;
 GLubyte pixelData[HEIGHT][WIDTH][3];
@@ -84,15 +81,22 @@ bool Init()
 	glClearColor(0, 0, 1, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	// precalculate triangle constants
-	//for (int i = 0; i < numTriangles; i++) {
-	//	// perpendicular distance from origin to plane
-	//	tris[i].d = -Vec3::Dot(tris[i].centroid - camera.position, tris[i].normal);
-	//}
-
 	for (int i = 0; i < NUM_MESHES; i++) {
-		meshes[i] = new Mesh(tris, numTriangles);
-		meshes[i]->bvh->Rebuild();
+		meshes[i] = new Mesh(tris, numTriangles, i);
+		bvh[i] = new BVH(meshes[i]->tris, numTriangles);
+		bvh[i]->Rebuild();
+	}
+
+	for (int i = 0; i < NUM_MESH_INST; i++) {
+		meshInstances[i] = new MeshInstance(meshes[0]);
+	}
+
+	tlas = new TLAS(bvh, meshInstances, NUM_MESH_INST);
+	tlas->Rebuild();
+
+	for (int i = 0; i < NUM_MESH_INST; i++) {
+		if (i == 0) meshInstances[i]->SetTransform(Mat4::CreateTranslation(Vec3(0.0f, 1.0f, 0.0f)));
+		else if (i == 1) meshInstances[i]->SetTransform(Mat4::CreateTranslation(Vec3(0.0f, -1.0f, 0.0f)));
 	}
 
 	renderQuad = new RenderQuad();
@@ -124,12 +128,13 @@ int RayCast(Ray ray, Vertex& outVertex, int ignoreID = 0) {
 	//step through bvh for triangles
 	Tri* closestTri = nullptr;
 	HitInfo closestTriHit;
-	for (int i = 0; i < NUM_MESH_INST; i++) {
-		ray.origin = camera.position + meshPositions[i];
-		meshes[0]->bvh->CalculateIntersection(ray, closestTriHit);
-	}
+	//for (int i = 0; i < NUM_MESH_INST; i++) {
+	//	MeshInstance& meshInst = *meshInstances[i];
+	//	ray.origin = Camera::Get().position + meshInst.invTransform.GetTranslation();
+	//	meshInst.meshRef->bvh.CalculateIntersection(ray, closestTriHit);
+	//}
+	tlas->CalculateIntersection(ray, closestTriHit);
 	closestTri = closestTriHit.hit;
-	//if (closestTriHit.triId != -1) closestTri = &trisAnim[closestTriHit.triId];
 
 	//calculate normal for closest intersection (sphere or triangle)
 	//if (closestSphere && closestTri) {
@@ -156,7 +161,7 @@ Vec3 CastShadowRays(const Vertex& vertex, int ignoreID = 0) {
 	Vec3 color = ambient_light;
 
 	//specular light setup
-	Vec3 toCamera = camera.position - vertex.position;
+	Vec3 toCamera = Camera::Get().position - vertex.position;
 	toCamera.Normalize();
 
 	Ray ray;
@@ -216,7 +221,7 @@ void DrawScene()
 
 	clock_t startBuildTime = clock();
 	for (int i = 0; i < NUM_MESHES; i++) {
-		meshes[i]->bvh->Refit();
+		bvh[i]->Refit();
 	}
 	c = clock();
 	buildTime += (c - startBuildTime);
@@ -224,7 +229,7 @@ void DrawScene()
 	clock_t startDrawTime = c;
 
 	Vertex vert;
-	const int tileSize = 16;
+	const int tileSize = 8;
 	int x, y, u, v, i;
 
 #pragma omp parallel for schedule(dynamic) reduction(+:raycastTime), private(y, u, v, i, vert)
@@ -233,7 +238,7 @@ void DrawScene()
 			for (u = x; u < x + tileSize; u++) for (v = y; v < y + tileSize; v++) {
 				//if i used x and y here it gave a kinda cool pixellated effect lol
 				clock_t startRayTime = clock();
-				int hit = RayCast(camera.GetRay(u, v), vert);
+				int hit = RayCast(Camera::Get().GetRay(u, v), vert);
 				raycastTime += (clock() - startRayTime);
 				if (hit) {
 					// cast shadow ray
@@ -264,7 +269,7 @@ void DrawScene()
 	//Util::Print("Avg ms per raycast = " + std::to_string(raycastTime / (double)(WIDTH * HEIGHT)));
 	//Util::Print("Total triangle intersections = " + std::to_string(intersections));
 	//Util::Print("False intersections = " + std::to_string(meshes[0]->bvh->falseBranch));
-	meshes[0]->bvh->falseBranch = 0;
+	bvh[0]->falseBranch = 0;
 	//Util::Print("Total draw secs = " + std::to_string(drawTime/1000.0f));
 	//Util::Print("BVH construction secs = " + std::to_string(buildTime/1000.0f));
 }

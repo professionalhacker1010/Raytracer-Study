@@ -1,6 +1,9 @@
 #include "BVH.h"
 #include "util.h"
 #include "RayCast.h"
+#include "MeshInstance.h"
+#include "Mesh.h"
+#include "Camera.h"
 
 bool debugPrint = true;
 bool debugColor = false;
@@ -32,14 +35,18 @@ void BVH::DebugTraversal(unsigned int idx) {
 
 BVH::BVH(Tri* triangles, unsigned int numTris)
 {
-	for (int i = 0; i < numTris; i++) {
-		tris[i] = triangles[i];
-	}
-	nodes = new BVHNode[numTris * 2 - 1];
+	Set(triangles, numTris);
+}
+
+void BVH::Set(Tri* triangles, unsigned int numTris)
+{
+	tris = triangles;
+	nodes = (BVHNode*)_aligned_malloc(sizeof(BVHNode) * numTris * 2, 64);
 	triIndices = new unsigned int[numTris];
 	this->numTris = numTris;
 
 	if (debugPrint) Util::Print("Total tris in scene = " + std::to_string(numTris));
+	if (debugPrint) Util::Print("Sizeof BVH node = " + std::to_string(sizeof(Tri)));
 }
 
 void BVH::Rebuild()
@@ -51,17 +58,17 @@ void BVH::Rebuild()
 	root.numTris = numTris;
 	root.leftFirst = 0;
 
-	nodeCounter = 0;
-	UpdateNodeBounds(nodeCounter);
-	Subdivide(nodeCounter);
+	numNodes = 0;
+	UpdateNodeBounds(numNodes);
+	Subdivide(numNodes);
 
-	if (debugPrint) Util::Print("Nodes generated = " + std::to_string(nodeCounter + 1));
+	if (debugPrint) Util::Print("Nodes generated = " + std::to_string(numNodes + 1));
 	//if (debugPrint) DebugTraversal(0);
 }
 
 void BVH::Refit()
 {
-	for (int i = nodeCounter - 1; i >= 0; i--) {
+	for (int i = numNodes - 1; i >= 0; i--) {
 		BVHNode& node = nodes[i];
 		if (node.numTris > 0) {
 			UpdateNodeBounds(i);
@@ -69,17 +76,19 @@ void BVH::Refit()
 		}
 		BVHNode& left = nodes[node.leftFirst];
 		BVHNode& right = nodes[node.leftFirst + 1];
-		node.min = Vec3::Min(left.min, Vec3(right.min));
-		node.max = Vec3::Max(left.max, Vec3(right.max));
+		unsigned int leftFirst = node.leftFirst, numTris = node.numTris;
+		node.min = Vec3::Min(left.min, right.min);
+		node.max = Vec3::Max(left.max, right.max);
+		node.leftFirst = leftFirst;
+		node.numTris = numTris;
 	}
 }
 
-void BVH::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
+bool BVH::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
 {
-	BVHNode* node = &nodes[nodeIdx];
+	BVHNode* node = &nodes[nodeIdx], * left, * right, * stack[MAX_BVH_STACK];
 	unsigned int stackIdx = 0;
-	BVHNode* left, * right;
-	BVHNode* stack[MAX_BVH_STACK];
+	bool hasHit = false;
 
 	while (true)
 	{
@@ -92,6 +101,7 @@ void BVH::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
 				if (tris[triIndices[i]].CalculateIntersection(ray, out)) {
 					out.hit = &tris[triIndices[i]];
 					ray.maxDist = out.distance;
+					hasHit = true;
 				}
 				else falseBranch++;
 			}
@@ -101,7 +111,7 @@ void BVH::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
 		}
 		left = &nodes[node->leftFirst];
 		right = &nodes[node->leftFirst + 1];
-		//get closest AABB intersection
+
 		float leftDist = FLT_MAX;
 		Ray::IntersectAABB_SIMD(ray, left->min4, left->max4, leftDist);
 		float rightDist = FLT_MAX;
@@ -126,29 +136,34 @@ void BVH::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
 			
 		}
 	}
+	return hasHit;
 }
 
 void BVH::UpdateNodeBounds(unsigned int index)
 {
 	BVHNode& node = nodes[index];
+	unsigned int leftFirst = node.leftFirst, numTris = node.numTris;
+	unsigned int maxIdx = leftFirst + numTris;
 	node.min = Vec3(FLT_MAX);
 	node.max = Vec3(-FLT_MAX);
-	unsigned int maxIdx = node.leftFirst + node.numTris;
 
-	for (unsigned int i = node.leftFirst; i < maxIdx; i++) {
+	for (unsigned int i = leftFirst; i < maxIdx; i++) {
 		Tri& tri = tris[triIndices[i]];
 		for (unsigned int j = 0; j < 3; j++) {
-			node.min = Vec3::Min(node.min, Vec3(tri.verts[j].position));
-			node.max = Vec3::Max(node.max, Vec3(tri.verts[j].position));
+			node.min = Vec3::Min(node.min, tri.verts[j].position);
+			node.max = Vec3::Max(node.max, tri.verts[j].position);
 		}
 	}
-
+	node.leftFirst = leftFirst;
+	node.numTris = numTris;
 	//if (debug) Util::Print("Node " + std::to_string(index) + " resized to min = " + (std::string)node.bounds.min + ", max = " + (std::string)node.bounds.max);
 }
 
 void BVH::Subdivide(unsigned int parentIdx)
 {
 	BVHNode& parent = nodes[parentIdx];
+
+	if (parentIdx == 0) numNodes++; //to fit left and right nodes on 64 byte cache line
 
 	//calculate split resulting in smallest AABB surface areas
 	float bestCost = FLT_MAX;
@@ -177,8 +192,8 @@ void BVH::Subdivide(unsigned int parentIdx)
 	int numLeftTris = splitIdx - parent.leftFirst;
 	if (numLeftTris == 0 || numLeftTris == parent.numTris) return;
 
-	int leftChildIdx = ++nodeCounter;
-	int rightChildIdx = ++nodeCounter;
+	int leftChildIdx = ++numNodes;
+	int rightChildIdx = ++numNodes;
 	
 	//here leftFirst is interpreted as first index of tris
 	nodes[leftChildIdx].leftFirst = parent.leftFirst;
@@ -220,6 +235,15 @@ void BVH::CalculateBestSplit(const BVHNode& parent, float& bestCost, float& best
 		}
 		if (maxBound == minBound) return;
 		float boundSize = maxBound - minBound;
+
+		struct Bin {
+			Bin() {
+				bounds.min = Vec3(FLT_MAX);
+				bounds.max = Vec3(-FLT_MAX);
+			}
+			AABB bounds;
+			int numTris = 0;
+		};
 
 		//populate bins
 		const int BINS = SPLIT_PLANES + 1;
@@ -291,31 +315,107 @@ BVH::~BVH()
 	delete[] tris;
 }
 
-float BVH::SurfaceAreaHeuristic(const BVHNode& node, int axis, double splitPos)
-{
-	unsigned int leftTris = 0, rightTris = 0;
-	AABB leftBox = AABB(Vec3(FLT_MAX), Vec3(-FLT_MAX));
-	AABB rightBox = AABB(Vec3(FLT_MAX), Vec3(-FLT_MAX));
-
-	unsigned int maxNodeIdx = node.leftFirst + node.numTris;
-	for (unsigned int i = node.leftFirst; i < maxNodeIdx; i++) {
-		Tri& tri = tris[triIndices[i]];
-		if (tri.centroid[axis] < splitPos) {
-			for (unsigned int j = 0; j < 3; j++) leftBox.Grow(tri.verts[j].position);
-			leftTris++;
-		}
-		else {
-			for (unsigned int j = 0; j < 3; j++) rightBox.Grow(tri.verts[j].position);
-			rightTris++;
-		}
-	}
-
-	float cost = leftTris * leftBox.Area() + rightTris * rightBox.Area();
-	if (debugSAH) {
-		Util::Print("left tris " + std::to_string(leftTris) + " left area " + std::to_string(leftBox.Area()) + " right tris " + std::to_string(rightTris) + " right area " + std::to_string(rightBox.Area()));
-		//Util::Print("left min " + (std::string)leftBox.min + " left max " + (std::string)leftBox.max);
-		//Util::Print("right min " + (std::string)rightBox.min + " right max " + (std::string)rightBox.max);
-	}
-	if (leftTris > 0 && rightTris > 0) return cost;
-	else return FLT_MAX;
+BVHInstance::BVHInstance(BVH* bvHeirarchy, MeshInstance* meshInstance) {
+	Set(bvHeirarchy, meshInstance);
 }
+
+void BVHInstance::Set(BVH* bvHeirarchy, MeshInstance* meshInstance)
+{
+	bvh = bvHeirarchy;
+	mesh = meshInstance;
+	mesh->OnTransformSet = [this](Mat4 transform) {
+		worldSpaceBounds = AABB(Vec3(FLT_MAX), Vec3(-FLT_MAX));
+		for (int i = 0; i < 8; i++) {
+			worldSpaceBounds.Grow(Mat4::Transform(
+				Vec3(
+					i & 1 ? bvh->GetBounds().max[0] : bvh->GetBounds().min[0],
+					i & 2 ? bvh->GetBounds().max[1] : bvh->GetBounds().min[1],
+					i & 4 ? bvh->GetBounds().max[2] : bvh->GetBounds().min[2]
+				),
+				transform
+			));
+		}
+	};
+}
+
+TLAS::TLAS(BVH** bvhList, MeshInstance** meshInstances, int numMeshInstances)
+{
+	blas = new BVHInstance[numMeshInstances];
+	for (int i = 0; i < numMeshInstances; i++) {
+		blas[i].Set(bvhList[meshInstances[i]->meshRef->id], meshInstances[i]);
+	}
+	//meshes = meshInstances;
+	//meshIndices = new int[numMeshInstances];
+	//for (int i = 0; i < numBVH; i++) {
+	//	blas[i].bvh = &(meshes[i]->meshRef->id);
+	//	blas[i].meshInstance = meshes[i];
+	//}
+	//blas = bvhList;
+	numBLAS = numMeshInstances;
+	nodes = (TLASNode*)_aligned_malloc(sizeof(TLASNode) * 2 * numMeshInstances, 64);
+	numNodes = numMeshInstances * 2; //for now
+}
+
+void TLAS::Rebuild() {
+	nodes[0].min = Vec3(-100.0f);
+	nodes[0].max = Vec3(100.0f);
+	nodes[0].leftBLAS = 2;
+	nodes[0].isLeaf = false;
+
+	for (int i = 2; i < numBLAS * 2; i++) {
+		nodes[i].min = Vec3(-100.0f);
+		nodes[i].max = Vec3(100.0f);
+		nodes[i].leftBLAS = i - 2;
+		nodes[i].isLeaf = true;
+	}
+}
+
+bool TLAS::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx) {
+	TLASNode* node = &nodes[0], * stack[64], * left, * right;
+	unsigned int stackIdx = 0;
+	bool hasHit = false;
+	while (true)
+	{
+		if (node->isLeaf)
+		{
+			BVHInstance& bvhInstance = blas[node->leftBLAS];
+			//MeshInstance& mesh = *meshes[node->leftBLAS];
+			ray.origin = Camera::Get().position + bvhInstance.mesh->invTransform.GetTranslation();
+			if (bvhInstance.bvh->CalculateIntersection(ray, out, 0)) {
+				ray.maxDist = out.distance;
+				hasHit = true;
+			}
+			if (stackIdx == 0) break; 
+			else node = stack[--stackIdx];
+			continue;
+		}
+		left = &nodes[node->leftBLAS];
+		right = &nodes[node->leftBLAS + 1];
+
+		float leftDist = FLT_MAX, rightDist = FLT_MAX;
+		Ray::IntersectAABB(ray, left->min, left->max, leftDist);
+		Ray::IntersectAABB(ray, right->min, right->max, rightDist);
+
+		//intersect with neither 
+		if (leftDist == FLT_MAX && rightDist == FLT_MAX)
+		{
+			if (stackIdx == 0) break;
+			else node = stack[--stackIdx];
+		}
+		//intersection found, keep going down the tree
+		//if intersected with the other child too, push it to the stack for later
+		else {
+			if (leftDist > rightDist) {
+				node = right;
+				if (leftDist != FLT_MAX) stack[stackIdx++] = left;
+			}
+			else {
+				node = left;
+				if (rightDist != FLT_MAX) stack[stackIdx++] = right;
+			}
+		}
+	}
+	return hasHit;
+}
+
+
