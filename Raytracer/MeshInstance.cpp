@@ -3,6 +3,6 @@
 #include "Mesh.h"
 void MeshInstance::SetTransform(Mat4 transform)
 {
-	transform = transform;
-	OnTransformSet(transform);
+	this->transform = transform;
+	if (OnTransformSet) OnTransformSet(transform);
 }

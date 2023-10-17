@@ -59,6 +59,7 @@ struct BVHInstance {
 	BVHInstance() = default;
 	BVHInstance(BVH* bvHeirarchy, MeshInstance* meshInstance);
 	void Set(BVH* bvHeirarchy, MeshInstance* meshInstance);
+	bool CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx = 0);
 	BVH* bvh;
 	MeshInstance* mesh;
 	AABB worldSpaceBounds;

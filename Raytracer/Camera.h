@@ -11,12 +11,11 @@ public:
 	}
 	Ray GetRay(unsigned int x, unsigned int y);
 	Vec3 position;
-	Vec3 rayDirections[WIDTH][HEIGHT];
 
 	void UpdateRays();
-	Ray rays[WIDTH][HEIGHT];
 
 private:
+	Ray rays[WIDTH][HEIGHT];
 	Camera();
 public:
 	Camera(Camera const&) = delete;

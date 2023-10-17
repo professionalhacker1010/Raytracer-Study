@@ -39,14 +39,14 @@ int numSpheres= 0;
 int numLights = 0;
 
 //scene
-//Camera camera;
+Camera* camera;
 TLAS* tlas;
 
 constexpr int NUM_MESHES = 1;
 BVH* bvh[NUM_MESHES];
 Mesh* meshes[NUM_MESHES];
 
-constexpr int NUM_MESH_INST = 2;
+constexpr int NUM_MESH_INST = 4;
 MeshInstance* meshInstances[NUM_MESH_INST];
 
 RenderQuad* renderQuad;
@@ -96,10 +96,12 @@ bool Init()
 	for (int i = 0; i < NUM_MESH_INST; i++) {
 		if (i == 0) meshInstances[i]->SetTransform(Mat4::CreateTranslation(Vec3(0.0f, 1.0f, 0.0f)));
 		else if (i == 1) meshInstances[i]->SetTransform(Mat4::CreateTranslation(Vec3(0.0f, -1.0f, 0.0f)));
+		else if (i == 2) meshInstances[i]->SetTransform(Mat4::CreateTranslation(Vec3(0.0f, -2.0f, 0.0f)));
+		else if (i == 3) meshInstances[i]->SetTransform(Mat4::CreateTranslation(Vec3(0.0f, 2.0f, 0.0f)));
 	}
-
 	tlas->Rebuild();
 
+	camera = &Camera::Get();
 	renderQuad = new RenderQuad();
 	return true;
 }
@@ -142,7 +144,8 @@ int RayCast(Ray ray, Vertex& outVertex, int ignoreID = 0) {
 	//	return closestSphere->id;
 	//}
 	if (closestTri) {
-		outVertex.color_diffuse = Vec3::One();
+		outVertex.color_diffuse = closestTri->verts[0].color_diffuse;
+		//outVertex.color_diffuse = Vec3::One();
 		//closestTri->CalculateVertex(closestTriHit.position, outVertex);
 		return closestTri->id;
 	}
@@ -213,6 +216,18 @@ void DrawScene()
 
 	for (int i = 0; i < NUM_MESHES; i++) {
 		meshes[i]->Animate(deltaTime);
+	}
+
+	// animate the scene
+	static float a[16] = { 0 }, h[16] = { 5, 4, 3, 2, 1, 5, 4, 3 }, s[16] = { 0 };
+	for (int i = 0, x = 0; x < 2; x++) for (int y = 0; y < 2; y++, i++)
+	{
+		Mat4 R, T = Mat4::CreateTranslation(Vec3((x - 1.5f) * 2.5f, 0, (y - 1.5f) * 2.5f));
+		if ((x + y) & 1) R = Mat4::CreateRotationX(a[i]) * Mat4::CreateRotationZ(a[i]);
+		else R = Mat4::CreateTranslation(Vec3(0, h[i / 2], 0));
+		if ((a[i] += (((i * 13) & 7) + 2) * 0.005f) > 2 * PI) a[i] -= 2 * PI;
+		if ((s[i] -= 0.01f, h[i] += s[i]) < 0) s[i] = 0.2f;
+		meshInstances[i]->SetTransform( Mat4::CreateScale(0.75f) * R * T * Mat4::CreateTranslation(Vec3(5.0f, 0.0f, 0.0f)));
 	}
 
 	clock_t startBuildTime = clock();

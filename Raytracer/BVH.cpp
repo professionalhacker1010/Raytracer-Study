@@ -46,7 +46,7 @@ void BVH::Set(Tri* triangles, unsigned int numTris)
 	this->numTris = numTris;
 
 	if (debugPrint) Util::Print("Total tris in scene = " + std::to_string(numTris));
-	if (debugPrint) Util::Print("Sizeof BVH node = " + std::to_string(sizeof(Tri)));
+	if (debugPrint) Util::Print("Sizeof BVH node = " + std::to_string(sizeof(BVHNode)));
 }
 
 void BVH::Rebuild()
@@ -327,6 +327,7 @@ void BVHInstance::Set(BVH* bvHeirarchy, MeshInstance* meshInstance)
 		worldSpaceBounds = AABB(Vec3(FLT_MAX), Vec3(-FLT_MAX));
 		invTransform = transform;
 		invTransform.Invert();
+		//calculate the transformed bounding box for the bvh instance
 		for (int i = 0; i < 8; i++) {
 			worldSpaceBounds.Grow(Mat4::Transform(
 				Vec3(
@@ -338,6 +339,21 @@ void BVHInstance::Set(BVH* bvHeirarchy, MeshInstance* meshInstance)
 			));
 		}
 	};
+}
+
+bool BVHInstance::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
+{
+	//transform the ray to do intersection on the un-transformed bvh
+	Ray backupRay = ray;
+	ray.Set(Mat4::Transform(ray.origin, invTransform, 1.0f), Mat4::Transform(ray.direction, invTransform, 0.0f));
+	bool hit = bvh->CalculateIntersection(ray, out, nodeIdx);
+
+	// restore ray origin and direction
+	backupRay.maxDist = ray.maxDist;
+	ray.dInv = backupRay.dInv;
+	ray.direction = backupRay.direction;
+	ray.origin = backupRay.origin;
+	return hit;
 }
 
 TLAS::TLAS(BVH** bvhList, MeshInstance** meshInstances, int numMeshInstances)
@@ -357,6 +373,7 @@ void TLAS::Rebuild() {
 
 	//initailize all nodes as leaf nodes
 	numNodes = 2;
+	if (numBLAS < 2) numNodes = 0;
 	for (unsigned int i = 0; i < numBLAS; i++) {
 		nodes[numNodes].min = blas[i].worldSpaceBounds.min;
 		nodes[numNodes].max = blas[i].worldSpaceBounds.max;
@@ -365,7 +382,7 @@ void TLAS::Rebuild() {
 		numNodes++;
 		tlasIndices[i] = i + 2;
 	}
-
+	if (numBLAS < 2) return;
 	//use agglomerative clustering to build the TLAS (bottom->up)
 	int nodesLeft = numBLAS;
 	int a = 1, b = FindBestMatch(tlasIndices, nodesLeft, a);
@@ -402,19 +419,6 @@ void TLAS::Rebuild() {
 	}
 	nodes[0].min4 = nodes[tlasIndices[a]].min4;
 	nodes[0].max4 = nodes[tlasIndices[a]].max4;
-	//Util::Print("TLAS nodes " + std::to_string(numNodes));
-	//for (int i = 0; i < numNodes; i++) {
-	//	if (nodes[i].leftRight == 0) {
-	//		Util::Print("node " + std::to_string(i) + " is leaf " + std::to_string(nodes[i].leftRight));
-	//		Util::Print("min " + (std::string)nodes[i].min + " max " + (std::string)nodes[i].max);
-	//	}
-	//	else {
-	//		short left = (nodes[i].leftRight & 0xffff);
-	//		short right = (nodes[i].leftRight >> 16);
-	//		Util::Print("node " + std::to_string(i) + " is interior " + std::to_string(left) + " " + std::to_string(right));
-	//		Util::Print("min " + (std::string)nodes[i].min + " max " + (std::string)nodes[i].max);
-	//	}
-	//}
 }
 
 bool TLAS::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx) {
@@ -426,9 +430,9 @@ bool TLAS::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx) {
 		if (node->leftRight == 0)
 		{
 			BVHInstance& bvhInstance = blas[node->BLAS];
-			ray.origin = cam->position + bvhInstance.invTransform.GetTranslation();
-			if (bvhInstance.bvh->CalculateIntersection(ray, out, 0)) {
-				ray.maxDist = out.distance;
+			if (bvhInstance.CalculateIntersection(ray, out, 0)) {
+				for (int i = 0; i < 3; i++) out.hit->verts[i].color_diffuse = colors[node->BLAS];
+				//ray.maxDist = out.distance;
 				hasHit = true;
 			}
 			if (stackIdx == 0) break; 
