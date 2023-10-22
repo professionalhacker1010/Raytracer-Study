@@ -5,8 +5,8 @@
 struct HitInfo {
 	float distance = FLT_MAX;
 	float u, v; //barycentric coords
-	int triId = -1;
-	int meshInstId = -1;
+	short triId = -1;
+	short meshInstId = -1;
 	//class Tri* hit = nullptr;
 };
 

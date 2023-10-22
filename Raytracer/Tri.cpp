@@ -13,7 +13,7 @@ bool Tri::CalculateIntersection(const Ray& ray, HitInfo& out) const
 	//const Vec3 edge2 = verts[2].position - verts[0].position;
 	const Vec3 h = Vec3::Cross(ray.direction, edge2);
 	const float a = Vec3::Dot(edge1, h);
-	if (a > -0.0001f && a < 0.0001f) return false; // ray parallel to triangle
+	if (abs(a) < 0.0001f) return false; // ray parallel to triangle
 	const float f = 1 / a;
 	const Vec3 s = ray.origin - verts[0];
 	const float u = f * Vec3::Dot(s, h);

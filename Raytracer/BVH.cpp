@@ -41,8 +41,8 @@ BVH::BVH(Tri* triangles, unsigned int numTris)
 void BVH::Set(Tri* triangles, unsigned int numTris)
 {
 	tris = triangles;
-	nodes = (BVHNode*)_aligned_malloc(sizeof(BVHNode) * numTris * 2, 64);
-	triIndices = new unsigned int[numTris];
+	nodes = (BVHNode*)_aligned_malloc(sizeof(BVHNode) * numTris * 2, ALIGN);
+	triIndices = (unsigned int*)_aligned_malloc(sizeof(unsigned int) * numTris, ALIGN);//new unsigned int[numTris];
 	this->numTris = numTris;
 
 	if (debugPrint) Util::Print("Total tris in scene = " + std::to_string(numTris));
@@ -52,7 +52,7 @@ void BVH::Set(Tri* triangles, unsigned int numTris)
 void BVH::Rebuild()
 {
 	clock_t startTime = clock();
-	for (unsigned int i = 0; i < numTris; i++) triIndices[i] = i;
+	for (unsigned int i = 0; i < (unsigned int)numTris; i++) triIndices[i] = i;
 
 	BVHNode& root = nodes[0];
 	root.numTris = numTris;
@@ -99,11 +99,11 @@ bool BVH::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
 			for (unsigned int i = node->leftFirst; i < maxIdx; i++)
 			{
 				if (tris[triIndices[i]].CalculateIntersection(ray, out)) {
-					out.triId = triIndices[i];
+					out.triId = (short)triIndices[i];
 					ray.maxDist = out.distance;
 					hasHit = true;
 				}
-				else falseBranch++;
+			//	else falseBranch++;
 			}
 			if (stackIdx == 0) break;
 			else node = stack[--stackIdx];
@@ -345,20 +345,19 @@ bool BVHInstance::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nod
 	ray.direction = backupRay.direction;
 	ray.origin = backupRay.origin;
 
-	if (hit) out.meshInstId = mesh->id;
+	if (hit) out.meshInstId = (short)mesh->id;
 
 	return hit;
 }
 
 TLAS::TLAS(BVH** bvhList, MeshInstance** meshInstances, int numMeshInstances)
 {
-	blas = new BVHInstance[numMeshInstances];
+	blas = (BVHInstance*)_aligned_malloc(sizeof(BVHInstance) * numMeshInstances, ALIGN);//new BVHInstance[numMeshInstances];
 	for (int i = 0; i < numMeshInstances; i++) {
 		blas[i].Set(bvhList[meshInstances[i]->meshRef->id], meshInstances[i]);
 	}
 	numBLAS = numMeshInstances;
-	nodes = (TLASNode*)_aligned_malloc(sizeof(TLASNode) * 2 * numMeshInstances, 64);
-	cam = &Camera::Get();
+	nodes = (TLASNode*)_aligned_malloc(sizeof(TLASNode) * 2 * numMeshInstances, ALIGN);
 }
 
 void TLAS::Rebuild() {

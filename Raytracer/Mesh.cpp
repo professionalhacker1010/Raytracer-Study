@@ -20,7 +20,7 @@ Mesh::~Mesh()
 
 void Mesh::Animate(float deltaTime)
 {
-	if ((rotation += (rotationSpeed * deltaTime)) > 2.0f * PI) rotation -= 2.0f * PI;
+	if ((rotation += (rotationSpeed * deltaTime)) > 2.0f * PI) rotation -= 2.0f * (float)PI;
 	float a = sinf(rotation) * 0.5f;
 	for (int i = 0; i < numTris; i++) {
 		for (int j = 0; j < 3; j++) {

@@ -42,7 +42,7 @@ public:
 
 	//debug
 	void DebugTraversal(unsigned int idx);
-	std::atomic_int falseBranch = 0;
+	//std::atomic_int falseBranch = 0;
 
 private:	
 	void UpdateNodeBounds(unsigned int index); //look through tris in the node and update the AABB
@@ -54,6 +54,7 @@ private:
 	Tri* tris; //not sorted
 	unsigned int* triIndices; //proxy for sorted tris, to avoid sorting the actual array
 	int numNodes = 0, numTris;
+	float pad0, pad1, pad2;
 };
 
 struct BVHInstance {
@@ -61,10 +62,10 @@ struct BVHInstance {
 	BVHInstance(BVH* bvHeirarchy, MeshInstance* meshInstance);
 	void Set(BVH* bvHeirarchy, MeshInstance* meshInstance);
 	bool CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx = 0);
-	BVH* bvh;
-	MeshInstance* mesh;
+	Mat4 invTransform; //64
 	AABB worldSpaceBounds;
-	Mat4 invTransform;
+	BVH* bvh = nullptr;
+	MeshInstance* mesh = nullptr;
 };
 
 struct TLASNode {
@@ -105,7 +106,6 @@ private:
 		}
 		return bestB;
 	}
-	Camera* cam;
 	TLASNode* nodes; //nodes created in order s.t. all leaf nodes come first -> go towards root node
 	BVHInstance* blas; //bottom-level acceleration structures, not sorted
 	unsigned int numNodes = 0, numBLAS;

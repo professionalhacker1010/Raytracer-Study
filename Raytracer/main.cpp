@@ -109,7 +109,7 @@ bool Init()
 		else if (i == 1) meshInstances[i]->SetTransform(Mat4::CreateTranslation(Vec3(0.0f, -1.0f, 0.0f)));
 		else if (i == 2) meshInstances[i]->SetTransform(Mat4::CreateTranslation(Vec3(0.0f, -2.0f, 0.0f)));
 		else if (i == 3) meshInstances[i]->SetTransform(Mat4::CreateTranslation(Vec3(0.0f, 2.0f, 0.0f)));
-		meshInstances[i]->color = colors[i];
+		//meshInstances[i]->color = colors[i];
 	}
 	tlas->Rebuild();
 
@@ -296,7 +296,7 @@ void DrawScene()
 	//Util::Print("Avg ms per raycast = " + std::to_string(raycastTime / (double)(WIDTH * HEIGHT)));
 	//Util::Print("Total triangle intersections = " + std::to_string(intersections));
 	//Util::Print("False intersections = " + std::to_string(meshes[0]->bvh->falseBranch));
-	bvh[0]->falseBranch = 0;
+	//bvh[0]->falseBranch = 0;
 	//Util::Print("Total draw secs = " + std::to_string(drawTime/1000.0f));
 	//Util::Print("BVH construction secs = " + std::to_string(buildTime/1000.0f));
 }

@@ -17,4 +17,4 @@
 #define fov 60.0
 
 #define _MM_SHUFFLER( xi, yi, zi, wi ) _MM_SHUFFLE( wi, zi, yi, xi )
-
+#define ALIGN 64

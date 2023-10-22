@@ -15,13 +15,15 @@ public:
 	void SetTransform(Mat4 transform);
 	Mat4 GetTransform() { return transform; }
 
-	std::function<void(Mat4 transform)> OnTransformSet;
-	Mesh* meshRef;
-	int id;
+private:
+	Mat4 transform; //64 bytes
+public:
+	std::function<void(Mat4 transform)> OnTransformSet; //40 bytes
+	Mesh* meshRef; //4
+	int id; //4
 
 	//temp
-	Vec3 color;
-private:
-	Mat4 transform;
+	//Vec3 color; 
+
 
 };

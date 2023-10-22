@@ -51,4 +51,5 @@ private:
 		//FragColor = vec4(TexCoords.x, TexCoords.y, 0.0, 1.0); // Example color output
     }
 )";
+	float pad;
 };
