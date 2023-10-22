@@ -21,5 +21,8 @@ struct Vertex
 
 struct TriVerts
 {
-	Vertex verts[3];
+	//Vertex verts[3];
+	Vec3 norm[3];
+	Vec3 uv1_1_2;
+	Vec3 uv2_3_3;
 };

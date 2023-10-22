@@ -1,8 +1,9 @@
 #include "Mesh.h"
 #include "Camera.h"
 
-Mesh::Mesh(Tri* triangles, int numTriangles, int meshId) {
+Mesh::Mesh(Tri* triangles, TriVerts* triVertData, int numTriangles, int meshId) {
 	bindPoseTris = triangles;
+	vertData = triVertData;
 	numTris = numTriangles;
 	
 	tris = (Tri*)_aligned_malloc(sizeof(Tri) * numTris, 64);

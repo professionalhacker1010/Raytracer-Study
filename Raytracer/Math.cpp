@@ -1,26 +1,5 @@
 #include "Math.h"
 
-
-
-
-const Vec4 Vec4::Zero(0.0f, 0.0f, 0.0f, 0.0f);
-const Vec4 Vec4::One(1.0f, 1.0f, 1.0f, 1.0f);
-const Vec4 Vec4::UnitX(1.0f, 0.0f, 0.0f, 0.0f);
-const Vec4 Vec4::UnitY(0.0f, 1.0f, 0.0f, 0.0f);
-const Vec4 Vec4::UnitZ(0.0f, 0.0f, 1.0f, 0.0f);
-const Vec4 Vec4::UnitW(0.0f, 0.0f, 0.0f, 1.0f);
-const Vec4 Vec4::Identity(0.0f, 0.0f, 0.0f, 1.0f);
-
-static const float m4Ident[4][4] =
-{
-    { 1.0f, 0.0f, 0.0f, 0.0f },
-    { 0.0f, 1.0f, 0.0f, 0.0f },
-    { 0.0f, 0.0f, 1.0f, 0.0f },
-    { 0.0f, 0.0f, 0.0f, 1.0f }
-};
-
-const Mat4 Mat4::Identity(m4Ident);
-
 void Mat4::Invert()
 {
     float tmp[12]; /* temp array for pairs */

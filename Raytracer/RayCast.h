@@ -3,8 +3,8 @@
 #include <smmintrin.h>
 
 struct HitInfo {
-	Vec3 position;
 	float distance = FLT_MAX;
+	float u, v; //barycentric coords
 	int triId = -1;
 	int meshInstId = -1;
 	//class Tri* hit = nullptr;

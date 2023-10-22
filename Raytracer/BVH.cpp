@@ -363,7 +363,7 @@ TLAS::TLAS(BVH** bvhList, MeshInstance** meshInstances, int numMeshInstances)
 
 void TLAS::Rebuild() {
 	//proxy for indices of all TLASNodes remaining to be matched up
-	unsigned int* tlasIndices = new unsigned int[numBLAS];
+	unsigned int* tlasIndices = (unsigned int*)_aligned_malloc(sizeof(unsigned int) * numBLAS, 64);//new unsigned int[numBLAS];
 
 	//initailize all nodes as leaf nodes
 	numNodes = 2;
@@ -413,6 +413,7 @@ void TLAS::Rebuild() {
 	}
 	nodes[0].min4 = nodes[tlasIndices[a]].min4;
 	nodes[0].max4 = nodes[tlasIndices[a]].max4;
+	_aligned_free(tlasIndices);
 }
 
 bool TLAS::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx) {

@@ -28,7 +28,7 @@ bool Sphere::CalculateIntersection(const Ray& ray, HitInfo* out) const
 	//get intersection point, store distnace
 	Vec3 distVec;
 	distVec = ray.direction * t;
-	out->position = ray.origin + distVec;
+	//out->position = ray.origin + distVec;
 	out->distance = t;
 
 	return true;

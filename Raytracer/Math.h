@@ -126,7 +126,7 @@ public:
         struct { float c[4]; };
     };
 
-    Vec4() { *this = Vec4::Identity; }
+    Vec4() { *this = Vec4::Identity(); }
 
     // This directly sets the Vec4 components --
     // don't use for axis/angle
@@ -240,13 +240,13 @@ public:
 
     static float Dot(const Vec4& a, const Vec4& b){ return _mm_dp_ps(a.mC, b.mC, 0xF1).m128_f32[0]; }
 
-    static const Vec4 Zero;
-    static const Vec4 One;
-    static const Vec4 UnitX;
-    static const Vec4 UnitY;
-    static const Vec4 UnitZ;
-    static const Vec4 UnitW;
-    static const Vec4 Identity;
+    static Vec4 One() { return Vec4(1.0f); }
+    static Vec4 Zero() { return Vec4(0.0f); }
+    static Vec4 UnitX() { return Vec4(1.0f, 0.0f, 0.0f, 0.0f); }
+    static Vec4 UnitY() { return Vec4(0.0f, 1.0f, 0.0f, 0.0f); }
+    static Vec4 UnitZ() { return Vec4(0.0f, 0.0f, 1.0f, 0.0f); }
+    static Vec4 UnitW() { return Vec4(0.0f, 0.0f, 0.0f, 1.0f); }
+    static Vec4 Identity() { return Vec4(0.0f, 0.0f, 0.0f, 1.0f); }
 };
 
 typedef Vec4 Quaternion;
@@ -307,9 +307,6 @@ public:
 		*this = *this * right;
 		return *this;
 	}
-
-    //float* operator [] (int i) const { return mat[i]; }
-    //float operator[][](int i, int j) { return mat[i][j]; }
 
 	void Invert();
 
@@ -497,7 +494,16 @@ public:
         );
     }
 
-    static const Mat4 Identity;
+    static Mat4 Identity() {
+        static const float m4Ident[4][4] =
+        {
+            { 1.0f, 0.0f, 0.0f, 0.0f },
+            { 0.0f, 1.0f, 0.0f, 0.0f },
+            { 0.0f, 0.0f, 1.0f, 0.0f },
+            { 0.0f, 0.0f, 0.0f, 1.0f }
+        };
+        return Mat4(m4Ident);
+    }
 private:
 	union {
 		__m128 rows[4];

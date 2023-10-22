@@ -90,8 +90,10 @@ bool Init()
 	glClearColor(0, 0, 1, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
 
+	renderQuad = new RenderQuad();
+
 	for (int i = 0; i < NUM_MESHES; i++) {
-		meshes[i] = new Mesh(tris, numTriangles, i);
+		meshes[i] = new Mesh(tris, triVertData, numTriangles, i);
 		bvh[i] = new BVH(meshes[i]->tris, numTriangles);
 		bvh[i]->Rebuild();
 	}
@@ -111,8 +113,6 @@ bool Init()
 	}
 	tlas->Rebuild();
 
-
-	renderQuad = new RenderQuad();
 	camera = &Camera::Get();
 	return true;
 }
@@ -141,8 +141,8 @@ int RayCast(Ray ray, Vertex& outVertex, int ignoreID = 0) {
 
 	//step through bvh for triangles
 	//Tri* closestTri = nullptr;
-	HitInfo closestTriHit;
-	tlas->CalculateIntersection(ray, closestTriHit);
+	HitInfo hit;
+	tlas->CalculateIntersection(ray, hit);
 	
 
 	//calculate normal for closest intersection (sphere or triangle)
@@ -154,13 +154,13 @@ int RayCast(Ray ray, Vertex& outVertex, int ignoreID = 0) {
 	//	closestSphere->CalculateVertex(closestSphereHit.position, outVertex);
 	//	return closestSphere->id;
 	//}
-	if (closestTriHit.triId != -1) {
+	if (hit.triId != -1) {
 		
 		//closestTri = &tris[closestTriHit.triId];
 		//TriVerts& triVerts = triVertData[closestTriHit.hit];
 
-		outVertex.color_diffuse = meshInstances[closestTriHit.meshInstId]->color;
-		//outVertex.color_diffuse = Vec3::One();
+		//outVertex.color_diffuse = meshInstances[closestTriHit.meshInstId]->color;
+		outVertex.color_diffuse = Vec3(hit.u, hit.v, 1 - (hit.u + hit.v));
 		//closestTri->CalculateVertex(closestTriHit.position, outVertex);
 		return true;
 	}
@@ -308,6 +308,7 @@ bool LoadScene(char* argv)
 	char type[50];
 	int i;
 	Tri t;
+	TriVerts v;
 	Sphere s;
 	Light l;
 	fscanf(file, "%i", &number_of_objects);
@@ -323,13 +324,26 @@ bool LoadScene(char* argv)
 		if (stricmp(type, "triangle") == 0)
 		{
 			//printf("found triangle\n");
-			t.ParseFromFile(file);
+			//t.ParseFromFile(file);
 
+			for (int i = 0; i < 3; i++)
+			{
+				Util::parse_doubles(file, "pos:", t.verts[i]);
+				Vec3 dummy;
+				Util::parse_doubles(file, "nor:", v.norm[i]);
+				Util::parse_doubles(file, "dif:", dummy);
+				Util::parse_doubles(file, "spe:", dummy);
+				double tempShi;
+				Util::parse_shi(file, &tempShi);
+				
+			}
+			t.CachedCalculations();
 			//if (numTriangles == MAX_TRIANGLES)
 			//{
 			//	printf("too many triangles, you should increase MAX_TRIANGLES!\n");
 			//	return false;
 			//}
+			triVertData[numTriangles] = v;
 			tris[numTriangles++] = t;
 		}
 		else if (stricmp(type, "sphere") == 0)

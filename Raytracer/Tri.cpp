@@ -25,42 +25,11 @@ bool Tri::CalculateIntersection(const Ray& ray, HitInfo& out) const
 	if (t > ray.maxDist) return false;
 	if (t > 0.0001f) {
 		out.distance = t;
+		out.u = u;
+		out.v = v;
 		return true;
 	}
 	return false;
-
-	// distance from ray origin to plane
-	/*double t = Ray::CalculatePlaneIntersection(normal, ray, d);
-
-	if (t < 0.) return false; // intersection behind ray origin
-
-	if (ray.maxDist < t || out.distance < t) return false; // closer intersection already found
-
-	//project onto plane not perpendicular to triangle
-	float projRay[2] = { ray.origin[dimOne] + (ray.direction[dimOne] * t), ray.origin[dimTwo] + (ray.direction[dimTwo] * t) };
-
-	//calc areas with barycentric coordinates
-	float areaTri, areaA, areaB, areaC, areaCurr = 0.0f;
-
-	areaTri = Util::calcTriArea2D(proj1, proj2, proj3) + 0.0001f;
-
-	areaA = Util::calcTriArea2D(proj1, proj2, projRay);
-	areaCurr += areaA;
-	if (areaCurr > areaTri) return false; 	// point not within triangle
-	
-	areaB = Util::calcTriArea2D(proj1, projRay, proj3);
-	areaCurr += areaB;
-	if (areaCurr > areaTri) return false;
-
-	areaC = Util::calcTriArea2D(projRay, proj2, proj3);
-	areaCurr += areaC;
-	if (areaCurr > areaTri) return false;
-
-	//out.position = Vec3(areaA, areaB, areaC) / areaTri;
-	out.distance = t;
-	out.triId = id - 1;
-
-	return true;*/
 }
 
 void Tri::CalculateVertex(const Vec3& coord, Vertex& outVertex)

@@ -9,6 +9,7 @@
 struct Ray;
 struct HitInfo;
 class Tri;
+class Mesh;
 class MeshInstance;
 class Camera;
 

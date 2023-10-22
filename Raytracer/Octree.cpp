@@ -96,19 +96,19 @@ bool Octree::CalculateIntersection(const Ray& ray, HitInfo* out, int ignoreID)
 		CalculateVoxelIntersection(root->minBounds, root->maxBounds, root->d, ray, &frontHit);
 	}
 	else {
-		frontHit.position.Set(ray.origin);
+		//frontHit.position.Set(ray.origin);
 		frontHit.distance = 0;
 	}
-	testRay.origin = epsilon + frontHit.position;
+	//testRay.origin = epsilon + frontHit.position;
 	CalculateVoxelIntersection(root->minBounds, root->maxBounds, root->d, testRay, &backHit);
 
 	//step through octree
 	while (closestTri == nullptr && !Util::doubleCompare(frontHit.distance, backHit.distance) && frontHit.distance < ray.maxDist) {
 
 		//find closest intersection in tree
-		frontHit.position = epsilon + frontHit.position;
+		//frontHit.position = epsilon + frontHit.position;
 
-		closestNode = FindNode(root, frontHit.position);
+		//closestNode = FindNode(root, frontHit.position);
 		if (!closestNode) return false;
 		//printVec3(frontHit.position, "test pos");
 		//printVec3(closestNode->minBounds, "min");
@@ -131,7 +131,7 @@ bool Octree::CalculateIntersection(const Ray& ray, HitInfo* out, int ignoreID)
 				if (!closestTri || hitInfo.distance < out->distance) {
 
 					closestTri = it->second;
-					out->position = hitInfo.position;
+					//out->position = hitInfo.position;
 					out->distance = hitInfo.distance;
 				}
 			}
@@ -140,7 +140,7 @@ bool Octree::CalculateIntersection(const Ray& ray, HitInfo* out, int ignoreID)
 
 		//if no found continue to next octree node
 		double tempDist = frontHit.distance;
-		testRay.origin = frontHit.position;
+		//testRay.origin = frontHit.position;
 		CalculateVoxelIntersection(closestNode->minBounds, closestNode->maxBounds, closestNode->d, testRay, &frontHit);
 		//printVec3(frontHit.position);
 		//printDouble(frontHit.distance);
@@ -168,8 +168,8 @@ void Octree::CalculateVoxelIntersection(const Vec3& min, const Vec3& max, const 
 		// determine if new closest intersection
 		if (t < out->distance) {
 			out->distance = t;
-			out->position = ray.direction * t;
-			out->position = out->position + ray.origin;
+			//out->position = ray.direction * t;
+			//out->position = out->position + ray.origin;
 		}
 	}
 }
