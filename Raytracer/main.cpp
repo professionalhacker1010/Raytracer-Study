@@ -30,6 +30,7 @@ char* filename = 0;
 int mode = MODE_DISPLAY;
 
 Tri tris[MAX_TRIANGLES];
+TriVerts triVertData[MAX_TRIANGLES];
 Sphere spheres[MAX_SPHERES];
 Light lights[MAX_LIGHTS];
 Vec3 ambient_light;
@@ -61,6 +62,14 @@ clock_t totalTime = 0;
 clock_t raycastTime = 0;
 clock_t drawTime = 0;
 clock_t buildTime = 0;
+Vec3 colors[] = {
+	Vec3(1, 0, 0), //red
+	Vec3(0, 1, 0), //green
+	Vec3(0, 0, 1), //blue
+	Vec3(1, 1, 0), //yellow
+	Vec3(0, 1, 1), //teal
+	Vec3(1, 0, 1), //pink
+};
 
 bool Init()
 {
@@ -88,7 +97,7 @@ bool Init()
 	}
 
 	for (int i = 0; i < NUM_MESH_INST; i++) {
-		meshInstances[i] = new MeshInstance(meshes[0]);
+		meshInstances[i] = new MeshInstance(meshes[0], i);
 	}
 
 	tlas = new TLAS(bvh, meshInstances, NUM_MESH_INST);
@@ -98,11 +107,13 @@ bool Init()
 		else if (i == 1) meshInstances[i]->SetTransform(Mat4::CreateTranslation(Vec3(0.0f, -1.0f, 0.0f)));
 		else if (i == 2) meshInstances[i]->SetTransform(Mat4::CreateTranslation(Vec3(0.0f, -2.0f, 0.0f)));
 		else if (i == 3) meshInstances[i]->SetTransform(Mat4::CreateTranslation(Vec3(0.0f, 2.0f, 0.0f)));
+		meshInstances[i]->color = colors[i];
 	}
 	tlas->Rebuild();
 
-	camera = &Camera::Get();
+
 	renderQuad = new RenderQuad();
+	camera = &Camera::Get();
 	return true;
 }
 
@@ -129,10 +140,10 @@ int RayCast(Ray ray, Vertex& outVertex, int ignoreID = 0) {
 	//}
 
 	//step through bvh for triangles
-	Tri* closestTri = nullptr;
+	//Tri* closestTri = nullptr;
 	HitInfo closestTriHit;
 	tlas->CalculateIntersection(ray, closestTriHit);
-	closestTri = closestTriHit.hit;
+	
 
 	//calculate normal for closest intersection (sphere or triangle)
 	//if (closestSphere && closestTri) {
@@ -143,11 +154,15 @@ int RayCast(Ray ray, Vertex& outVertex, int ignoreID = 0) {
 	//	closestSphere->CalculateVertex(closestSphereHit.position, outVertex);
 	//	return closestSphere->id;
 	//}
-	if (closestTri) {
-		outVertex.color_diffuse = closestTri->verts[0].color_diffuse;
+	if (closestTriHit.triId != -1) {
+		
+		//closestTri = &tris[closestTriHit.triId];
+		//TriVerts& triVerts = triVertData[closestTriHit.hit];
+
+		outVertex.color_diffuse = meshInstances[closestTriHit.meshInstId]->color;
 		//outVertex.color_diffuse = Vec3::One();
 		//closestTri->CalculateVertex(closestTriHit.position, outVertex);
-		return closestTri->id;
+		return true;
 	}
 
 	return false;
@@ -177,7 +192,7 @@ Vec3 CastShadowRays(const Vertex& vertex, int ignoreID = 0) {
 		//	continue;
 		//}
 
-		Vec3 diffuse;
+		/*Vec3 diffuse;
 		Vec3 specular;
 
 		//diffuse light
@@ -196,7 +211,7 @@ Vec3 CastShadowRays(const Vertex& vertex, int ignoreID = 0) {
 
 		//final color
 		Vec3 colorContribution = (diffuse + specular) * lights[i].color;
-		color = color + colorContribution;
+		color = color + colorContribution;*/
 		
 	}
 
@@ -308,7 +323,7 @@ bool LoadScene(char* argv)
 		if (stricmp(type, "triangle") == 0)
 		{
 			//printf("found triangle\n");
-			t.ParseFromFile(file, i + 1);
+			t.ParseFromFile(file);
 
 			//if (numTriangles == MAX_TRIANGLES)
 			//{

@@ -15,6 +15,7 @@ public:
 private:
 	Tri* bindPoseTris;
 
+
 	float rotation = 0;
 	float rotationSpeed = 5.0f;
 	float numTris = 0;

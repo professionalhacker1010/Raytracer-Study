@@ -39,10 +39,10 @@ void Sphere::CalculateVertex(const Vec3& position, Vertex& outVertex)
 	outVertex.normal.Set((position[0] - this->position[0]) / radius,
 		(position[1] - this->position[1]) / radius,
 		(position[2] - this->position[2]) / radius);
-	outVertex.color_diffuse = color_diffuse;
-	outVertex.color_specular = color_specular;
+	//outVertex.color_diffuse = color_diffuse;
+	//outVertex.color_specular = color_specular;
 	outVertex.position = position;
-	outVertex.shininess = shininess;
+	//outVertex.shininess = shininess;
 	if (debug < 10) {
 		//Util::Print(position);
 		debug++;

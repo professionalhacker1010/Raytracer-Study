@@ -8,7 +8,7 @@ Octree::Octree(Vec3 maxBounds, Vec3 minBounds, Tri triangles[MAX_TRIANGLES], int
 	root->maxBounds = maxBounds;
 	root->minBounds = minBounds;
 	for (int i = 0; i < numTris; i++) {
-		root->tris[triangles[i].id] = &triangles[i];
+		//root->tris[triangles[i].id] = &triangles[i];
 	}
 
 	Init(root);
@@ -234,9 +234,9 @@ void Octree::Init(Node* root)
 
 			int inBoundsCount = 0;
 			for (int v = 0; v < 3; v++) {
-				if (Util::withinBounds(it->second->verts[v].position, child->maxBounds, child->minBounds)) {
+				//if (Util::withinBounds(it->second->verts[v].position, child->maxBounds, child->minBounds)) {
 					inBoundsCount++;
-				}
+				//}
 			}
 
 			if (inBoundsCount > 0)	child->tris.insert(std::pair<int, Tri*>(it->first, it->second));

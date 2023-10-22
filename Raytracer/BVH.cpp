@@ -8,14 +8,14 @@
 bool debugPrint = true;
 bool debugColor = false;
 bool debugSAH = false;
-Vec3 colors[] = {
-	Vec3(1, 0, 0), //red
-	Vec3(0, 1, 0), //green
-	Vec3(0, 0, 1), //blue
-	Vec3(1, 1, 0), //yellow
-	Vec3(0, 1, 1), //teal
-	Vec3(1, 0, 1), //pink
-};
+//Vec3 colors[] = {
+//	Vec3(1, 0, 0), //red
+//	Vec3(0, 1, 0), //green
+//	Vec3(0, 0, 1), //blue
+//	Vec3(1, 1, 0), //yellow
+//	Vec3(0, 1, 1), //teal
+//	Vec3(1, 0, 1), //pink
+//};
 int colorIdx = 0;
 
 void BVH::DebugTraversal(unsigned int idx) {
@@ -99,7 +99,7 @@ bool BVH::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
 			for (unsigned int i = node->leftFirst; i < maxIdx; i++)
 			{
 				if (tris[triIndices[i]].CalculateIntersection(ray, out)) {
-					out.hit = &tris[triIndices[i]];
+					out.triId = triIndices[i];
 					ray.maxDist = out.distance;
 					hasHit = true;
 				}
@@ -150,8 +150,8 @@ void BVH::UpdateNodeBounds(unsigned int index)
 	for (unsigned int i = leftFirst; i < maxIdx; i++) {
 		Tri& tri = tris[triIndices[i]];
 		for (unsigned int j = 0; j < 3; j++) {
-			node.min = Vec3::Min(node.min, tri.verts[j].position);
-			node.max = Vec3::Max(node.max, tri.verts[j].position);
+			node.min = Vec3::Min(node.min, tri.verts[j]);
+			node.max = Vec3::Max(node.max, tri.verts[j]);
 		}
 	}
 	node.leftFirst = leftFirst;
@@ -174,15 +174,6 @@ void BVH::Subdivide(unsigned int parentIdx)
 	//if the split doesn't subdivide into smaller/better boxes than the parent, stop subdividing
 	float parentCost = parent.numTris * AABB(parent.min, parent.max).Area();
 	if (bestCost >= parentCost) {
-		if (debugColor) {
-			unsigned int maxTriIdx = parent.leftFirst + parent.numTris;
-			for (unsigned int i = parent.leftFirst; i < maxTriIdx; i++) {
-				Tri& tri = tris[triIndices[i]];
-				for (int j = 0; j < 3; j++) tri.verts[j].color_diffuse = colors[colorIdx];
-			}
-			colorIdx++;
-			if (colorIdx >= 6) colorIdx = 0;
-		}
 		return;
 	}
 
@@ -253,7 +244,7 @@ void BVH::CalculateBestSplit(const BVHNode& parent, float& bestCost, float& best
 			Tri& tri = tris[triIndices[i]];
 			int binIdx = (int)fmin(BINS - 1, (int)((tri.centroid[axis] - minBound) / step)); //the tri affects the bounds of whichever bin the centroid is in
 			bin[binIdx].numTris++;
-			for (unsigned int j = 0; j < 3; j++) bin[binIdx].bounds.Grow(tri.verts[j].position);
+			for (unsigned int j = 0; j < 3; j++) bin[binIdx].bounds.Grow(tri.verts[j]);
 		}
 
 		//precalculate area and tri counts
@@ -353,6 +344,9 @@ bool BVHInstance::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nod
 	ray.dInv = backupRay.dInv;
 	ray.direction = backupRay.direction;
 	ray.origin = backupRay.origin;
+
+	if (hit) out.meshInstId = mesh->id;
+
 	return hit;
 }
 
@@ -431,8 +425,6 @@ bool TLAS::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx) {
 		{
 			BVHInstance& bvhInstance = blas[node->BLAS];
 			if (bvhInstance.CalculateIntersection(ray, out, 0)) {
-				for (int i = 0; i < 3; i++) out.hit->verts[i].color_diffuse = colors[node->BLAS];
-				//ray.maxDist = out.distance;
 				hasHit = true;
 			}
 			if (stackIdx == 0) break; 

@@ -15,7 +15,7 @@ bool Tri::CalculateIntersection(const Ray& ray, HitInfo& out) const
 	const float a = Vec3::Dot(edge1, h);
 	if (a > -0.0001f && a < 0.0001f) return false; // ray parallel to triangle
 	const float f = 1 / a;
-	const Vec3 s = ray.origin - verts[0].position;
+	const Vec3 s = ray.origin - verts[0];
 	const float u = f * Vec3::Dot(s, h);
 	if (u < 0 || u > 1) return false;
 	const Vec3 q = Vec3::Cross(s, edge1);
@@ -66,31 +66,30 @@ bool Tri::CalculateIntersection(const Ray& ray, HitInfo& out) const
 void Tri::CalculateVertex(const Vec3& coord, Vertex& outVertex)
 {
 	//interpolate vertex based on area
-	outVertex.color_diffuse =
-		Vec3::BaryCoord(verts[2].color_diffuse, verts[1].color_diffuse, verts[0].color_diffuse, coord);
-	outVertex.color_specular =
-		Vec3::BaryCoord(verts[2].color_specular, verts[1].color_specular, verts[0].color_specular, coord);
-	outVertex.normal =
-		Vec3::BaryCoord(verts[2].normal, verts[1].normal, verts[0].normal, coord);
-	outVertex.position =
-		Vec3::BaryCoord(verts[2].position, verts[1].position, verts[0].position, coord);
-	outVertex.shininess = Vec3::Dot(Vec3(verts[2].shininess, verts[1].shininess, verts[0].shininess), coord);
+	//outVertex.color_diffuse =
+	//	Vec3::BaryCoord(verts[2].color_diffuse, verts[1].color_diffuse, verts[0].color_diffuse, coord);
+	//outVertex.color_specular =
+	//	Vec3::BaryCoord(verts[2].color_specular, verts[1].color_specular, verts[0].color_specular, coord);
+	//outVertex.normal =
+	//	Vec3::BaryCoord(verts[2].normal, verts[1].normal, verts[0].normal, coord);
+	//outVertex.position =
+	//	Vec3::BaryCoord(verts[2].position, verts[1].position, verts[0].position, coord);
+	//outVertex.shininess = Vec3::Dot(Vec3(verts[2].shininess, verts[1].shininess, verts[0].shininess), coord);
 }
 
-void Tri::ParseFromFile(FILE* file, int id)
+void Tri::ParseFromFile(FILE* file)
 {
 	for (int i = 0; i < 3; i++)
 	{
-		Util::parse_doubles(file, "pos:", verts[i].position);
-		Util::parse_doubles(file, "nor:", verts[i].normal);
-		Util::parse_doubles(file, "dif:", verts[i].color_diffuse);
-		Util::parse_doubles(file, "spe:", verts[i].color_specular);
+		Util::parse_doubles(file, "pos:", verts[i]);
+		Vec3 dummy;
+		Util::parse_doubles(file, "nor:", dummy);
+		Util::parse_doubles(file, "dif:", dummy);
+		Util::parse_doubles(file, "spe:", dummy);
 		double tempShi;
 		Util::parse_shi(file, &tempShi);
-		verts[i].shininess = (float)tempShi;
+		//verts[i].shininess = (float)tempShi;
 	}
-
-	this->id = id;
 
 	CachedCalculations();
 	intersectionChecks = 0;
@@ -105,14 +104,14 @@ int Tri::debug()
 
 void Tri::CachedCalculations()
 {
-	edge1 = verts[1].position - verts[0].position;
-	edge2 = verts[2].position - verts[0].position;
+	edge1 = verts[1] - verts[0];
+	edge2 = verts[2] - verts[0];
 
 	//plane normal
-	normal = Vec3::Cross(edge1, edge2);
-	normal.Normalize();
+	//normal = Vec3::Cross(edge1, edge2);
+	//normal.Normalize();
 
-	centroid = (verts[0].position + verts[1].position + verts[2].position) / 3.0f;
+	centroid = (verts[0] + verts[1] + verts[2]) / 3.0f;
 
 	//	// perpendicular distance from origin to plane
 	//	d = -Vec3::Dot(centroid - camera.position, normal);

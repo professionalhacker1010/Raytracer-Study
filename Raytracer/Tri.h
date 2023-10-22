@@ -18,16 +18,15 @@ public:
 	/// </summary>
 	void CalculateVertex(const Vec3& coord, Vertex& outVertex);
 
-	void ParseFromFile(FILE* file, int id);
+	void ParseFromFile(FILE* file);
 
 	int debug();
 
-	Vertex verts[3];
+	Vec3 verts[3];
 	Vec3 centroid;
-	Vec3 normal;
+	//Vec3 normal;
 	Vec3 edge1, edge2;
 	//float d;
-	int id = 0;
 
 	//unsigned int dimOne = 0, dimTwo = 1;
 	
