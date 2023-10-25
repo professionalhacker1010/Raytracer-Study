@@ -4,9 +4,9 @@
 
 Octree::Octree(Vec3 maxBounds, Vec3 minBounds, Tri triangles[MAX_TRIANGLES], int numTris)
 {
-	root = new Node();
-	root->maxBounds = maxBounds;
-	root->minBounds = minBounds;
+	//root = new Node();
+	//root->maxBounds = maxBounds;
+	//root->minBounds = minBounds;
 	for (int i = 0; i < numTris; i++) {
 		//root->tris[triangles[i].id] = &triangles[i];
 	}
@@ -145,7 +145,7 @@ bool Octree::CalculateIntersection(const Ray& ray, HitInfo* out, int ignoreID)
 		//printVec3(frontHit.position);
 		//printDouble(frontHit.distance);
 		//printf("\n");
-		frontHit.distance += tempDist;
+		//frontHit.distance += tempDist;
 	}
 
 	return closestTri;
@@ -157,8 +157,8 @@ void Octree::CalculateVoxelIntersection(const Vec3& min, const Vec3& max, const 
 
 	for (int i = 0; i < 6; i++) {
 		// get distance from ray origin to plane
-		double t;
-		double d;
+		float t;
+		float d;
 		if (i < 3) d = -Vec3::Dot(min /* - cameraPos*/, cubeNormals[i]);
 		else d = -Vec3::Dot(max /* - cameraPos */ , cubeNormals[i]);
 
@@ -177,9 +177,9 @@ void Octree::CalculateVoxelIntersection(const Vec3& min, const Vec3& max, const 
 void Octree::Init(Node* root)
 {
 	Vec3 center = Vec3(
-		root->minBounds[0] + 0.5 * (root->maxBounds[0] - root->minBounds[0]),
-		root->minBounds[1] + 0.5 * (root->maxBounds[1] - root->minBounds[1]),
-		root->minBounds[2] + 0.5 * (root->maxBounds[2] - root->minBounds[2])
+		root->minBounds[0] + 0.5f * (root->maxBounds[0] - root->minBounds[0]),
+		root->minBounds[1] + 0.5f * (root->maxBounds[1] - root->minBounds[1]),
+		root->minBounds[2] + 0.5f * (root->maxBounds[2] - root->minBounds[2])
 	);
 	root->center = center;
 

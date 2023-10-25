@@ -39,8 +39,8 @@ struct Ray {
 	static bool IntersectAABB(const Ray& ray, Vec3 minBounds, Vec3 maxBounds, float& out);
 	static bool IntersectAABB_SIMD(const Ray& ray, const __m128 bmin4, const __m128 bmax4, float& out);
 
-	union { struct { Vec3 origin; float maxDist; }; __m128 origin4; };
-	union { struct { Vec3 direction; float pad1; }; __m128 direction4; };
-	union { struct { Vec3 dInv; float pad2; }; __m128 dInv4; };
+	union { Vec3 origin; struct {  float pad0, pad1, pad2, maxDist; }; __m128 origin4; };
+	union { Vec3 direction; __m128 direction4; };
+	union { Vec3 dInv;  __m128 dInv4; };
 	
 };

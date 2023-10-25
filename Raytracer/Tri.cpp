@@ -50,13 +50,13 @@ void Tri::ParseFromFile(FILE* file)
 {
 	for (int i = 0; i < 3; i++)
 	{
-		Util::parse_doubles(file, "pos:", verts[i]);
-		Vec3 dummy;
-		Util::parse_doubles(file, "nor:", dummy);
-		Util::parse_doubles(file, "dif:", dummy);
-		Util::parse_doubles(file, "spe:", dummy);
-		double tempShi;
-		Util::parse_shi(file, &tempShi);
+		//Util::parse_doubles(file, "pos:", verts[i]);
+		//Vec3 dummy;
+		//Util::parse_doubles(file, "nor:", dummy);
+		//Util::parse_doubles(file, "dif:", dummy);
+		//Util::parse_doubles(file, "spe:", dummy);
+		//double tempShi;
+		//Util::parse_shi(file, &tempShi);
 		//verts[i].shininess = (float)tempShi;
 	}
 

@@ -116,6 +116,56 @@ private:
 	};
 };
 
+struct Vec2 {
+    Vec2() = default;
+    Vec2(const Vec2& v) { c[0] = v[0]; c[1] = v[1]; }
+    Vec2(float x, float y) { c[0] = x; c[1] = y; }
+    Vec2(float val) { c[0] = val; c[1] = val; }
+
+    //operator overloads
+    const Vec2& operator = (const Vec2& rhs) noexcept {
+        if (this == &rhs) return *this;
+        c[0] = rhs[0]; c[1] = rhs[1];//_mm_setr_ps(rhs[0], rhs[1], rhs[2], 0.0f);
+        return *this;
+    }
+
+    Vec2 operator + (const Vec2& rhs) const { return Vec2(c[0] + rhs[0], c[1] + rhs[1]); }
+    Vec2 operator += (const Vec2& rhs) {
+        c[0] += rhs[0]; c[1] += rhs[1];
+        return *this;
+    }
+    Vec2 operator - (const Vec2& rhs) const { return Vec2(c[0] - rhs[0], c[1] - rhs[1]); }
+    Vec2 operator -= (const Vec2& rhs) {
+        c[0] -= rhs[0]; c[1] -= rhs[1];
+        return *this;
+    }
+    friend Vec2 operator* (float a, const Vec2& b) { return Vec2(b[0] * a, b[1] * a); }
+    Vec2 operator * (const Vec2& rhs) const { return Vec2(c[0] * rhs[0], c[1] * rhs[1]); }
+    Vec2 operator * (float rhs) const { return Vec2(c[0] * rhs, c[1] * rhs); }
+    Vec2 operator *= (float rhs) {
+        c[0] *= rhs; c[1] *= rhs;
+        return *this;
+    }
+    Vec2 operator / (const Vec2& rhs) const { return Vec2(c[0] / rhs[0], c[1] / rhs[1]); }
+    Vec2 operator / (float rhs) const { return Vec2(c[0] / rhs, c[1] / rhs); }
+    Vec2 operator /= (float rhs) {
+        c[0] /= rhs; c[1] /= rhs;
+        return *this;
+    }
+    float operator [] (int i) const { return c[i]; }
+    operator std::string() const { return " " + std::to_string(c[0]) + " " + std::to_string(c[1]); }
+
+    static Vec2 BaryCoord(const Vec2& v1, const Vec2& v2, const Vec2& v3, const Vec3& coord) {
+        return coord[0] * v1 + coord[1] * v2 + coord[3] * v3;
+    }
+
+    void Set(float x, float y) { c[0] = x; c[1] = y; }
+    void Set(const Vec2& v) { c[0] = v[0]; c[1] = v[1]; }
+
+private:
+    float c[2] = { 0.0f };
+};
+
 struct Vec4
 {
 public:

@@ -110,6 +110,7 @@
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="Surface.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="tests.h" />
     <ClInclude Include="Tri.h" />
@@ -130,6 +131,7 @@
     <ClCompile Include="RenderQuad.cpp" />
     <ClCompile Include="Sphere.cpp" />
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="Surface.cpp" />
     <ClCompile Include="Tri.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>

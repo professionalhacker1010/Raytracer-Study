@@ -13,7 +13,7 @@ enum NodePos {
 	BACK_LEFT_BOT, BACK_RIGHT_BOT,
 };
 
-typedef struct Node {
+struct Node {
 	Node* children[8];
 	Node* parent;
 	std::map<int, class Tri*> tris;

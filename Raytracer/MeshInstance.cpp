@@ -4,5 +4,4 @@
 void MeshInstance::SetTransform(Mat4 transform)
 {
 	this->transform = transform;
-	if (OnTransformSet) OnTransformSet(transform);
 }

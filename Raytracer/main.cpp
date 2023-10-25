@@ -24,19 +24,12 @@
 #include "RenderQuad.h"
 #include "Mesh.h"
 #include "MeshInstance.h"
-
-char* filename = 0;
-
+#include "Surface.h"
 int mode = MODE_DISPLAY;
 
-Tri tris[MAX_TRIANGLES];
-TriVerts triVertData[MAX_TRIANGLES];
-Sphere spheres[MAX_SPHERES];
 Light lights[MAX_LIGHTS];
 Vec3 ambient_light;
 
-int numTriangles = 0;
-int numSpheres= 0;
 int numLights = 0;
 
 //scene
@@ -48,7 +41,8 @@ BVH* bvh[NUM_MESHES];
 Mesh* meshes[NUM_MESHES];
 
 constexpr int NUM_MESH_INST = 4;
-MeshInstance* meshInstances[NUM_MESH_INST];
+MeshInstance* meshInstances;
+BVHInstance* bvhInstances;
 
 RenderQuad* renderQuad;
 GLubyte pixelData[HEIGHT][WIDTH][3];
@@ -73,6 +67,7 @@ Vec3 colors[] = {
 
 bool Init()
 {
+	printf("this is a test\n");
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
 	glutInitWindowPosition(500, 0);
 	glutInitWindowSize(WIDTH, HEIGHT);
@@ -90,78 +85,73 @@ bool Init()
 	glClearColor(0, 0, 1, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	renderQuad = new RenderQuad();
-
 	for (int i = 0; i < NUM_MESHES; i++) {
-		meshes[i] = new Mesh(tris, triVertData, numTriangles, i);
-		bvh[i] = new BVH(meshes[i]->tris, numTriangles);
+		//int dummy = 0;
+		meshes[i] = new Mesh("Assets/teapot.obj", "Assets/bricks.png", i);
+		bvh[i] = new BVH(meshes[i]->tris, meshes[i]->numTris);
 		bvh[i]->Rebuild();
 	}
 
+	meshInstances = (MeshInstance*)_aligned_malloc(sizeof(MeshInstance) * NUM_MESH_INST, ALIGN);
+	bvhInstances = (BVHInstance*)_aligned_malloc(sizeof(BVHInstance) * NUM_MESH_INST, ALIGN); //new BVHInstance[numMeshInstances];//
+
 	for (int i = 0; i < NUM_MESH_INST; i++) {
-		meshInstances[i] = new MeshInstance(meshes[0], i);
+		meshInstances[i].Set(meshes[0], i); //= (MeshInstance*)_aligned_malloc(sizeof(MeshInstance), ALIGN); //new MeshInstance(meshes[0], i);
+		bvhInstances[i].Set(bvh[meshInstances[i].meshRef->id], &meshInstances[i]);
 	}
 
-	tlas = new TLAS(bvh, meshInstances, NUM_MESH_INST);
+	tlas = new TLAS(bvhInstances, NUM_MESH_INST);
+	int size = sizeof(MeshInstance);
+	int size2 = sizeof(Mesh);
+	int size3 = sizeof(BVH);
+	int size4 = sizeof(TLAS);
+	int size5 = sizeof(RenderQuad);
+	int size6 = sizeof(BVHInstance);
+
 
 	for (int i = 0; i < NUM_MESH_INST; i++) {
-		if (i == 0) meshInstances[i]->SetTransform(Mat4::CreateTranslation(Vec3(0.0f, 1.0f, 0.0f)));
-		else if (i == 1) meshInstances[i]->SetTransform(Mat4::CreateTranslation(Vec3(0.0f, -1.0f, 0.0f)));
-		else if (i == 2) meshInstances[i]->SetTransform(Mat4::CreateTranslation(Vec3(0.0f, -2.0f, 0.0f)));
-		else if (i == 3) meshInstances[i]->SetTransform(Mat4::CreateTranslation(Vec3(0.0f, 2.0f, 0.0f)));
+		//if (i == 0) meshInstances[i].SetTransform(Mat4::CreateTranslation(Vec3(0.0f, 1.0f, -5.0f)));
+		//else if (i == 1) meshInstances[i].SetTransform(Mat4::CreateTranslation(Vec3(0.0f, -1.0f, -5.0f)));
+		//else if (i == 2) meshInstances[i].SetTransform(Mat4::CreateTranslation(Vec3(0.0f, -2.0f, -5.0f)));
+		//else if (i == 3) meshInstances[i].SetTransform(Mat4::CreateTranslation(Vec3(0.0f, 2.0f, -5.0f)));
 		//meshInstances[i]->color = colors[i];
 	}
 	tlas->Rebuild();
 
+
+	renderQuad = new RenderQuad();
 	camera = &Camera::Get();
 	return true;
+}
+
+inline Vec3 RGB8toRGB32F(unsigned int c)
+{
+	float s = 1 / 256.0f;
+	int r = (c >> 16) & 255;
+	int g = (c >> 8) & 255;
+	int b = c & 255;
+	return Vec3(r * s, g * s, b * s);
 }
 
 /// <summary>
 /// check if ray intersects with triangle or sphere, returns vertex at closest intersection point and id of hit object
 /// </summary>
 int RayCast(Ray ray, Vertex& outVertex, int ignoreID = 0) {
-	// loop through every sphere
-	//Sphere* closestSphere = nullptr;
-	//HitInfo closestSphereHit;
-	//for (int i = 0; i < numSpheres; i++) {
-	//	if (spheres[i].id == ignoreID) continue;
-	//	HitInfo hitInfo;
-	//	if (spheres[i].CalculateIntersection(ray, &hitInfo)) {
-	//		//check if within raycast length
-	//		if (hitInfo.distance > ray.maxDist) continue;
-	//		//check if new closest sphere
-	//		if (!closestSphere || hitInfo.distance < closestSphereHit.distance) {
-	//			closestSphere = &spheres[i];
-	//			closestSphereHit.position = hitInfo.position;
-	//			closestSphereHit.distance = hitInfo.distance;
-	//		}
-	//	}
-	//}
-
 	//step through bvh for triangles
-	//Tri* closestTri = nullptr;
 	HitInfo hit;
 	tlas->CalculateIntersection(ray, hit);
 	
-
-	//calculate normal for closest intersection (sphere or triangle)
-	//if (closestSphere && closestTri) {
-	//	if (closestSphereHit.distance < closestTriHit.distance) closestTri = nullptr;
-	//	else closestSphere = nullptr;
-	//}
-	//if (closestSphere) {
-	//	closestSphere->CalculateVertex(closestSphereHit.position, outVertex);
-	//	return closestSphere->id;
-	//}
 	if (hit.triId != -1) {
+		TriVerts& vertData = meshInstances[hit.meshInstId].meshRef->vertData[hit.triId];
+		Surface& tex = *(meshInstances[hit.meshInstId].meshRef->texture);
 		
-		//closestTri = &tris[closestTriHit.triId];
-		//TriVerts& triVerts = triVertData[closestTriHit.hit];
-
-		//outVertex.color_diffuse = meshInstances[closestTriHit.meshInstId]->color;
-		outVertex.color_diffuse = Vec3(hit.u, hit.v, 1 - (hit.u + hit.v));
-		//closestTri->CalculateVertex(closestTriHit.position, outVertex);
+		Vec3 coord = Vec3(hit.u, hit.v, 1 - (hit.u + hit.v));
+		Vec3 norm = Vec3::BaryCoord(vertData.norm[0], vertData.norm[1], vertData.norm[2], coord);
+		Vec2 uv = Vec2::BaryCoord(vertData.uv[1], vertData.uv[2], vertData.uv[0], coord);
+		int iu = (int)(uv[0] * tex.width) % tex.width;
+		int iv = (int)(uv[1] * tex.height) % tex.height;
+		unsigned int texel = tex.pixels[iu + iv * tex.width];
+		outVertex.color_diffuse = RGB8toRGB32F(texel);
 		return true;
 	}
 
@@ -242,7 +232,9 @@ void DrawScene()
 		else R = Mat4::CreateTranslation(Vec3(0, h[i / 2], 0));
 		if ((a[i] += (((i * 13) & 7) + 2) * 0.005f) > 2 * PI) a[i] -= 2 * PI;
 		if ((s[i] -= 0.01f, h[i] += s[i]) < 0) s[i] = 0.2f;
-		meshInstances[i]->SetTransform( Mat4::CreateScale(0.75f) * R * T * Mat4::CreateTranslation(Vec3(5.0f, 0.0f, 0.0f)));
+		Mat4 transform = Mat4::CreateScale(0.75f) * R * T * Mat4::CreateTranslation(Vec3(2.0f, 0.0f, -2.0f));
+		meshInstances[i].SetTransform(transform);
+		bvhInstances[i].SetTransform(transform);
 	}
 
 	clock_t startBuildTime = clock();
@@ -286,99 +278,10 @@ void DrawScene()
 	}
 
 	drawTime += (clock() - startDrawTime);
-
+	triIntersections += meshes[0]->tris[0].debug();
 	glutPostRedisplay();
 
 	frames++;
-
-	int intersections = tris[0].debug();
-	triIntersections += intersections;
-	//Util::Print("Avg ms per raycast = " + std::to_string(raycastTime / (double)(WIDTH * HEIGHT)));
-	//Util::Print("Total triangle intersections = " + std::to_string(intersections));
-	//Util::Print("False intersections = " + std::to_string(meshes[0]->bvh->falseBranch));
-	//bvh[0]->falseBranch = 0;
-	//Util::Print("Total draw secs = " + std::to_string(drawTime/1000.0f));
-	//Util::Print("BVH construction secs = " + std::to_string(buildTime/1000.0f));
-}
-
-bool LoadScene(char* argv)
-{
-	FILE* file = fopen("examples/SIGGRAPH2.txt", "r");
-	int number_of_objects;
-	char type[50];
-	int i;
-	Tri t;
-	TriVerts v;
-	Sphere s;
-	Light l;
-	fscanf(file, "%i", &number_of_objects);
-
-	// printf("number of objects: %i\n",number_of_objects);
-
-	Util::parse_doubles(file, "amb:", ambient_light);
-
-	for (i = 0; i < number_of_objects; i++)
-	{
-		fscanf(file, "%s\n", type);
-		//printf("%s\n", type);
-		if (stricmp(type, "triangle") == 0)
-		{
-			//printf("found triangle\n");
-			//t.ParseFromFile(file);
-
-			for (int i = 0; i < 3; i++)
-			{
-				Util::parse_doubles(file, "pos:", t.verts[i]);
-				Vec3 dummy;
-				Util::parse_doubles(file, "nor:", v.norm[i]);
-				Util::parse_doubles(file, "dif:", dummy);
-				Util::parse_doubles(file, "spe:", dummy);
-				double tempShi;
-				Util::parse_shi(file, &tempShi);
-				
-			}
-			t.CachedCalculations();
-			//if (numTriangles == MAX_TRIANGLES)
-			//{
-			//	printf("too many triangles, you should increase MAX_TRIANGLES!\n");
-			//	return false;
-			//}
-			triVertData[numTriangles] = v;
-			tris[numTriangles++] = t;
-		}
-		else if (stricmp(type, "sphere") == 0)
-		{
-			//printf("found sphere\n");
-
-			s.ParseFromFile(file, i + 1);
-
-			if (numSpheres == MAX_SPHERES)
-			{
-				printf("too many spheres, you should increase MAX_SPHERES!\n");
-				return false;
-			}
-			spheres[numSpheres++] = s;
-		}
-		else if (stricmp(type, "light") == 0)
-		{
-			// printf("found light\n");
-			Util::parse_doubles(file, "pos:", l.position);
-			Util::parse_doubles(file, "col:", l.color);
-
-			if (numLights == MAX_LIGHTS)
-			{
-				printf("too many lights, you should increase MAX_LIGHTS!\n");
-				return false;
-			}
-			lights[numLights++] = l;
-		}
-		else
-		{
-			printf("unknown type in scene description:\n%s\n", type);
-			return false;
-		}
-	}
-	return true;
 }
 
 void Display()
@@ -410,6 +313,18 @@ void OnExit() {
 	Util::Print("Avg tri intersections = " + std::to_string(triIntersections / ((float)frames)));
 	Util::Print("Avg ms per raycast = " + std::to_string(raycastTime / ((float)(WIDTH * HEIGHT))));
 	Util::Print("Avg draw secs = " + std::to_string(drawTime / ((float)frames * 1000.0f)));
+	
+	_aligned_free(bvhInstances);
+	_aligned_free(meshInstances);
+
+	for (int i = 0; i < NUM_MESHES; i++) {
+		delete meshes[i];
+		delete bvh[i];
+	}
+	//delete[] meshes;
+	//delete[] bvh;
+	delete tlas;
+	delete renderQuad;
 }
 
 int main (int argc, char ** argv)
@@ -419,16 +334,10 @@ int main (int argc, char ** argv)
     printf ("usage: %s <scenefile> [jpegname]\n", argv[0]);
     exit(0);
   }
-  if(argc == 3)
-    {
-      mode = MODE_JPEG;
-      filename = argv[2];
-    }
   else if(argc == 2)
     mode = MODE_DISPLAY;
   
   glutInit(&argc,argv);
-  if (!LoadScene(argv[1])) exit(0);
   if (!Init()) exit(0);;
 
   glutDisplayFunc(Display);

@@ -5,6 +5,7 @@
 #include <xmmintrin.h>
 #include <ctime>
 #include <atomic>
+#include <functional>
 
 struct Ray;
 struct HitInfo;
@@ -62,13 +63,16 @@ struct BVHInstance {
 	BVHInstance(BVH* bvHeirarchy, MeshInstance* meshInstance);
 	void Set(BVH* bvHeirarchy, MeshInstance* meshInstance);
 	bool CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx = 0);
+	void SetTransform(Mat4 transform);
 	Mat4 invTransform; //64
 	AABB worldSpaceBounds;
 	BVH* bvh = nullptr;
 	MeshInstance* mesh = nullptr;
+	
 };
 
 struct TLASNode {
+	TLASNode() {}
 	union {
 		Vec3 min;
 		struct { float pad0, pad1, pad2; unsigned int leftRight; };
@@ -84,28 +88,15 @@ struct TLASNode {
 class TLAS {
 public:
 	TLAS() = default;
-	TLAS(BVH** bvhList, MeshInstance** meshInstances, int numMeshInstances);
+	TLAS(BVHInstance* bvhInstances, int numInstances);
 	~TLAS();
 
 	void Rebuild();
 	bool CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx = 0);
 	
 private:
-	int FindBestMatch(unsigned int* indices, int numNodes, int a) {
-		float smallest = FLT_MAX;
-		int bestB = -1;
-		for (int b = 0; b < numNodes; b++) if (b != a) {
-			AABB extents;
-			extents.max = Vec3::Max(nodes[indices[a]].max, nodes[indices[b]].max);
-			extents.min = Vec3::Min(nodes[indices[a]].min, nodes[indices[b]].min);
-			float surfaceArea = extents.Area();
-			if (surfaceArea < smallest) {
-				smallest = surfaceArea;
-				bestB = b;
-			}
-		}
-		return bestB;
-	}
+	int FindBestMatch(unsigned int* indices, int numNodes, int a);
+	
 	TLASNode* nodes; //nodes created in order s.t. all leaf nodes come first -> go towards root node
 	BVHInstance* blas; //bottom-level acceleration structures, not sorted
 	unsigned int numNodes = 0, numBLAS;

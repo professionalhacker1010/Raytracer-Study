@@ -37,58 +37,58 @@ public:
 	static void Print(std::string s = "") {
 		std::string p = s + "\n";
 		printf(p.c_str());
+		fflush(stdout);
 	}
 
-	static void parse_check(char* expected, char* found)
-	{
-		if (stricmp(expected, found))
-		{
-			printf("Expected '%s ' found '%s '\n", expected, found);
-			printf("Parse error, abnormal abortion\n");
-			exit(0);
-		}
+	//static void parse_check(char* expected, char* found)
+	//{
+	//	if (stricmp(expected, found))
+	//	{
+	//		printf("Expected '%s ' found '%s '\n", expected, found);
+	//		printf("Parse error, abnormal abortion\n");
+	//		exit(0);
+	//	}
+	//}
 
-	}
+	//static void parse_doubles(FILE* file, char* check, Vec3& p)
+	//{
+	//	char str[100];
+	//	fscanf(file, "%s", str);
+	//	parse_check(check, str);
+	//	p.ParseFromFile(file);
+	//	//printf("%s %lf %lf %lf\n", check, p[0], p[1], p[2]);
+	//}
 
-	static void parse_doubles(FILE* file, char* check, Vec3& p)
-	{
-		char str[100];
-		fscanf(file, "%s", str);
-		parse_check(check, str);
-		p.ParseFromFile(file);
-		//printf("%s %lf %lf %lf\n", check, p[0], p[1], p[2]);
-	}
+	//static void parse_doubles(FILE* file, char* check, double p[3])
+	//{
+	//	char str[100];
+	//	fscanf(file, "%s", str);
+	//	parse_check(check, str);
+	//	fscanf(file, "%lf %lf %lf", &p[0], &p[1], &p[2]);
+	//	//printf("%s %lf %lf %lf\n", check, p[0], p[1], p[2]);
+	//}
 
-	static void parse_doubles(FILE* file, char* check, double p[3])
-	{
-		char str[100];
-		fscanf(file, "%s", str);
-		parse_check(check, str);
-		fscanf(file, "%lf %lf %lf", &p[0], &p[1], &p[2]);
-		//printf("%s %lf %lf %lf\n", check, p[0], p[1], p[2]);
-	}
+	//static void parse_rad(FILE* file, double* r)
+	//{
+	//	char str[100];
+	//	fscanf(file, "%s", str);
+	//	parse_check("rad:", str);
+	//	fscanf(file, "%lf", r);
+	//	//printf("rad: %f\n", *r);
+	//}
 
-	static void parse_rad(FILE* file, double* r)
-	{
-		char str[100];
-		fscanf(file, "%s", str);
-		parse_check("rad:", str);
-		fscanf(file, "%lf", r);
-		//printf("rad: %f\n", *r);
-	}
+	//static void parse_shi(FILE* file, double* shi)
+	//{
+	//	char s[100];
+	//	fscanf(file, "%s", s);
+	//	parse_check("shi:", s);
+	//	fscanf(file, "%lf", shi);
+	//	//printf("shi: %f\n", *shi);
+	//}
 
-	static void parse_shi(FILE* file, double* shi)
-	{
-		char s[100];
-		fscanf(file, "%s", s);
-		parse_check("shi:", s);
-		fscanf(file, "%lf", shi);
-		//printf("shi: %f\n", *shi);
-	}
-
-#pragma region plot pixels
-	static void plot_pixel_display(int x, int y, unsigned char r, unsigned char g, unsigned char b);
-	static void plot_pixel(int x, int y, unsigned char r, unsigned char g, unsigned char b);
-#pragma endregion
+//#pragma region plot pixels
+//	static void plot_pixel_display(int x, int y, unsigned char r, unsigned char g, unsigned char b);
+//	static void plot_pixel(int x, int y, unsigned char r, unsigned char g, unsigned char b);
+//#pragma endregion
 };
 

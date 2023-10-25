@@ -4,21 +4,28 @@
 #include "Tri.h"
 #include "BVH.h"
 
+class Surface;
+
 class Mesh {
 public:
-	Mesh(Tri* triangles, TriVerts* triVertData, int numTriangles, int meshId);
+	Mesh(const char* objFile, const char* texFile, int meshId);
 	~Mesh();
 	
 	void Animate(float deltaTime);
 	Tri* tris;
 	TriVerts* vertData;
+
+	//TriVerts vertData[1024];
 private:
 	Tri* bindPoseTris;
+public:
+	Surface* texture;
+	//Tri bindPoseTris[1024];
 
 	float rotation = 0;
-	float rotationSpeed = 5.0f; 
-	int numTris = 0;
+	float rotationSpeed = 5.0f;
 public:
+	int numTris = 0;
+
 	int id;
-	float pad;
 };

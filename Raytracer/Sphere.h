@@ -28,9 +28,9 @@ public:
 	Vec3 position;
 	Vec3 color_diffuse;
 	Vec3 color_specular;
-	double shininess;
-	double radius;
-	int id;
+	double shininess = 0;
+	double radius = 0;
+	int id = 0;
 
 	int debug = 0;
 };

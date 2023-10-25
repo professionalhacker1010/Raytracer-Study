@@ -47,7 +47,7 @@ struct Vec3Test {
 		Util::Print("Magnitude " + std::to_string(v1.Length()));
 
 		//pointers
-		Vec3* p1 = new Vec3(1., 2., 3.);
+		/*Vec3* p1 = new Vec3(1., 2., 3.);
 		Util::Print("allocated " + (std::string)*p1);
 
 		ScopeTest1(p1); //321
@@ -57,7 +57,7 @@ struct Vec3Test {
 		Util::Print("bad modify pass by pointer " + (std::string)*p1);
 
 		ScopeTest3(p1); //456
-		Util::Print("Modify pass by pointer " + (std::string)*p1);
+		Util::Print("Modify pass by pointer " + (std::string)*p1);*/
 	}
 };
 

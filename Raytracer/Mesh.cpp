@@ -1,21 +1,69 @@
 #include "Mesh.h"
-#include "Camera.h"
+#include "Surface.h"
 
-Mesh::Mesh(Tri* triangles, TriVerts* triVertData, int numTriangles, int meshId) {
-	bindPoseTris = triangles;
-	vertData = triVertData;
-	numTris = numTriangles;
-	
-	tris = (Tri*)_aligned_malloc(sizeof(Tri) * numTris, 64);
-	for (int i = 0; i < numTris; i++) {
-		tris[i] = triangles[i];
-	}
-	id = meshId;
+Mesh::Mesh(const char* objFile, const char* texFile, int meshId)
+{
+    bindPoseTris = (Tri*)_aligned_malloc(sizeof(Tri) * MAX_TRIANGLES, ALIGN); //new Tri[MAX_TRIANGLES];//
+    vertData = (TriVerts*)_aligned_malloc(sizeof(TriVerts) * MAX_TRIANGLES, ALIGN);// new TriVerts[MAX_TRIANGLES];//
+
+    texture = new Surface(texFile);
+    Vec2 UV[1024];
+    Vec3 N[1024], P[1024];
+    int UVs = 0, Ns = 0, Ps = 0, a, b, c, d, e, f, g, h, i, idx = 0;
+    bool init = false;
+    FILE* file = fopen(objFile, "r");
+    while (!feof(file))
+    {
+        char line[1024] = { 0 };
+        fgets(line, 1023, file);
+        float norm[3] = { 0 }, pos[3] = { 0 }, uv[2] = { 0 };
+        if (line == strstr(line, "vt ")) UVs++,
+            sscanf(line + 3, "%f %f", &uv[0], &uv[1]);
+        else if (line == strstr(line, "vn ")) Ns++,
+            sscanf(line + 3, "%f %f %f", &norm[0], &norm[1], &norm[2]);
+        else if (line[0] == 'v') Ps++,
+            sscanf(line + 2, "%f %f %f", &pos[0], &pos[1], &pos[2]);
+
+        N[Ns].Set(norm[0], norm[1], norm[2]);
+        P[Ps].Set(pos[0], pos[1], pos[2]);
+        UV[UVs].Set(uv[0], uv[1]);
+
+        if (line[0] != 'f') continue; else
+            sscanf(line + 2, "%i/%i/%i %i/%i/%i %i/%i/%i",
+                &a, &b, &c, &d, &e, &f, &g, &h, &i);
+
+        //if (!init) {
+        //    init = true;
+        //    bindPoseTris = (Tri*)_aligned_malloc(sizeof(Tri) * numTris, ALIGN);
+        //    vertData = (TriVerts*)_aligned_malloc(sizeof(TriVerts) * numTris, ALIGN);
+        //}
+
+        bindPoseTris[idx].verts[0] = P[a]; vertData[idx].norm[0] = N[b]; vertData[idx].uv[0] = UV[c];
+        bindPoseTris[idx].verts[1] = P[d]; vertData[idx].norm[1] = N[e]; vertData[idx].uv[1] = UV[f];
+        bindPoseTris[idx].verts[2] = P[g]; vertData[idx].norm[2] = N[h]; vertData[idx].uv[2] = UV[i];
+        idx++;
+    }
+    fclose(file);
+
+    numTris = idx;
+
+    tris = (Tri*)_aligned_malloc(sizeof(Tri) * numTris, ALIGN); //new Tri[numTris];//
+    for (int i = 0; i < numTris; i++) {
+        bindPoseTris[i].CachedCalculations();
+        tris[i] = bindPoseTris[i];
+    }
+    id = meshId;
 }
 
 Mesh::~Mesh()
 {
-	delete[] tris;
+    //delete[] bindPoseTris;
+    //delete[] vertData;
+    //delete[] tris;
+    _aligned_free(bindPoseTris);
+    _aligned_free(vertData);
+    _aligned_free(tris);
+    delete texture;
 }
 
 void Mesh::Animate(float deltaTime)

@@ -5,6 +5,7 @@
 #include "Mesh.h"
 #include "Camera.h"
 
+
 bool debugPrint = true;
 bool debugColor = false;
 bool debugSAH = false;
@@ -41,8 +42,8 @@ BVH::BVH(Tri* triangles, unsigned int numTris)
 void BVH::Set(Tri* triangles, unsigned int numTris)
 {
 	tris = triangles;
-	nodes = (BVHNode*)_aligned_malloc(sizeof(BVHNode) * numTris * 2, ALIGN);
-	triIndices = (unsigned int*)_aligned_malloc(sizeof(unsigned int) * numTris, ALIGN);//new unsigned int[numTris];
+	nodes = (BVHNode*)_aligned_malloc(sizeof(BVHNode) * numTris * 2, ALIGN); //new BVHNode[numTris * 2];//
+	triIndices = (unsigned int*)_aligned_malloc(sizeof(unsigned int) * numTris, ALIGN); //new unsigned int[numTris]; //
 	this->numTris = numTris;
 
 	if (debugPrint) Util::Print("Total tris in scene = " + std::to_string(numTris));
@@ -86,7 +87,7 @@ void BVH::Refit()
 
 bool BVH::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
 {
-	BVHNode* node = &nodes[nodeIdx], * left, * right, * stack[MAX_BVH_STACK];
+	BVHNode* node = &nodes[nodeIdx], * left, * right, * stack[MAX_BVH_STACK] = { nullptr };
 	unsigned int stackIdx = 0;
 	bool hasHit = false;
 
@@ -248,8 +249,8 @@ void BVH::CalculateBestSplit(const BVHNode& parent, float& bestCost, float& best
 		}
 
 		//precalculate area and tri counts
-		float leftArea[SPLIT_PLANES], rightArea[SPLIT_PLANES];
-		int leftTris[SPLIT_PLANES], rightTris[SPLIT_PLANES];
+		float leftArea[SPLIT_PLANES] = { 0 }, rightArea[SPLIT_PLANES] = { 0 };
+		int leftTris[SPLIT_PLANES] = { 0 }, rightTris[SPLIT_PLANES] = { 0 };
 		AABB leftBin = AABB(Vec3(FLT_MAX), Vec3(-FLT_MAX));
 		AABB rightBin = AABB(Vec3(FLT_MAX), Vec3(-FLT_MAX));
 		int leftSum = 0, rightSum = 0;
@@ -301,9 +302,10 @@ int BVH::SortAlongAxis(const BVHNode& node, int axis, double splitPos)
 
 BVH::~BVH()
 {
-	delete[] nodes;
-	delete[] triIndices;
-	delete[] tris;
+	//delete[] nodes;
+	//delete[] triIndices;
+	_aligned_free(nodes);
+	_aligned_free(triIndices);
 }
 
 BVHInstance::BVHInstance(BVH* bvHeirarchy, MeshInstance* meshInstance) {
@@ -314,22 +316,24 @@ void BVHInstance::Set(BVH* bvHeirarchy, MeshInstance* meshInstance)
 {
 	bvh = bvHeirarchy;
 	mesh = meshInstance;
-	mesh->OnTransformSet = [this](Mat4 transform) {
-		worldSpaceBounds = AABB(Vec3(FLT_MAX), Vec3(-FLT_MAX));
-		invTransform = transform;
-		invTransform.Invert();
-		//calculate the transformed bounding box for the bvh instance
-		for (int i = 0; i < 8; i++) {
-			worldSpaceBounds.Grow(Mat4::Transform(
-				Vec3(
-					i % 2 == 0 ? bvh->GetBounds().max[0] : bvh->GetBounds().min[0],
-					(i % 4) < 2 ? bvh->GetBounds().max[1] : bvh->GetBounds().min[1],
-					i < 4 ? bvh->GetBounds().max[2] : bvh->GetBounds().min[2]
-				),
-				transform
-			));
-		}
-	};
+
+	
+	//mesh->SetOnTransform([this](Mat4 transform) {
+	//	worldSpaceBounds = AABB(Vec3(FLT_MAX), Vec3(-FLT_MAX));
+	//	invTransform = transform;
+	//	invTransform.Invert();
+	//	//calculate the transformed bounding box for the bvh instance
+	//	for (int i = 0; i < 8; i++) {
+	//		worldSpaceBounds.Grow(Mat4::Transform(
+	//			Vec3(
+	//				i % 2 == 0 ? bvh->GetBounds().max[0] : bvh->GetBounds().min[0],
+	//				(i % 4) < 2 ? bvh->GetBounds().max[1] : bvh->GetBounds().min[1],
+	//				i < 4 ? bvh->GetBounds().max[2] : bvh->GetBounds().min[2]
+	//			),
+	//			transform
+	//		));
+	//	}
+	//});
 }
 
 bool BVHInstance::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
@@ -350,19 +354,34 @@ bool BVHInstance::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nod
 	return hit;
 }
 
-TLAS::TLAS(BVH** bvhList, MeshInstance** meshInstances, int numMeshInstances)
+void BVHInstance::SetTransform(Mat4 transform)
 {
-	blas = (BVHInstance*)_aligned_malloc(sizeof(BVHInstance) * numMeshInstances, ALIGN);//new BVHInstance[numMeshInstances];
-	for (int i = 0; i < numMeshInstances; i++) {
-		blas[i].Set(bvhList[meshInstances[i]->meshRef->id], meshInstances[i]);
+	worldSpaceBounds = AABB(Vec3(FLT_MAX), Vec3(-FLT_MAX));
+	invTransform = transform;
+	invTransform.Invert();
+	//calculate the transformed bounding box for the bvh instance
+	for (int i = 0; i < 8; i++) {
+		worldSpaceBounds.Grow(Mat4::Transform(
+			Vec3(
+				i % 2 == 0 ? bvh->GetBounds().max[0] : bvh->GetBounds().min[0],
+				(i % 4) < 2 ? bvh->GetBounds().max[1] : bvh->GetBounds().min[1],
+				i < 4 ? bvh->GetBounds().max[2] : bvh->GetBounds().min[2]
+			),
+			transform
+		));
 	}
-	numBLAS = numMeshInstances;
-	nodes = (TLASNode*)_aligned_malloc(sizeof(TLASNode) * 2 * numMeshInstances, ALIGN);
+}
+
+TLAS::TLAS(BVHInstance* bvhInstances, int numInstances)
+{
+	blas = bvhInstances;
+	numBLAS = (unsigned int)numInstances;
+	nodes = (TLASNode*)_aligned_malloc(sizeof(TLASNode) * (2 * numInstances + 1), ALIGN);
 }
 
 void TLAS::Rebuild() {
 	//proxy for indices of all TLASNodes remaining to be matched up
-	unsigned int* tlasIndices = (unsigned int*)_aligned_malloc(sizeof(unsigned int) * numBLAS, 64);//new unsigned int[numBLAS];
+	unsigned int* tlasIndices = new unsigned int[numBLAS]; //(unsigned int*)_aligned_malloc(sizeof(unsigned int) * numBLAS, ALIGN); //
 
 	//initailize all nodes as leaf nodes
 	numNodes = 2;
@@ -375,7 +394,10 @@ void TLAS::Rebuild() {
 		numNodes++;
 		tlasIndices[i] = i + 2;
 	}
-	if (numBLAS < 2) return;
+	if (numBLAS < 2) {
+		delete[] tlasIndices;
+		return;
+	}
 	//use agglomerative clustering to build the TLAS (bottom->up)
 	int nodesLeft = numBLAS;
 	int a = 1, b = FindBestMatch(tlasIndices, nodesLeft, a);
@@ -412,11 +434,28 @@ void TLAS::Rebuild() {
 	}
 	nodes[0].min4 = nodes[tlasIndices[a]].min4;
 	nodes[0].max4 = nodes[tlasIndices[a]].max4;
-	_aligned_free(tlasIndices);
+
+	delete[] tlasIndices;
+}
+
+int TLAS::FindBestMatch(unsigned int* indices, int numNodes, int a) {
+	float smallest = FLT_MAX;
+	int bestB = -1;
+	for (int b = 0; b < numNodes; b++) if (b != a) {
+		AABB extents;
+		extents.max = Vec3::Max(nodes[indices[a]].max, nodes[indices[b]].max);
+		extents.min = Vec3::Min(nodes[indices[a]].min, nodes[indices[b]].min);
+		float surfaceArea = extents.Area();
+		if (surfaceArea < smallest) {
+			smallest = surfaceArea;
+			bestB = b;
+		}
+	}
+	return bestB;
 }
 
 bool TLAS::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx) {
-	TLASNode* node = &nodes[0], * stack[64], * left, * right;
+	TLASNode* node = &nodes[0], * stack[64] = {nullptr}, * left, * right;
 	unsigned int stackIdx = 0;
 	bool hasHit = false;
 	while (true)
@@ -462,6 +501,5 @@ bool TLAS::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx) {
 
 
 TLAS::~TLAS() {
-	delete[] blas;
-	delete[] nodes;
+	_aligned_free(nodes);
 }
