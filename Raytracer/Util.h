@@ -37,7 +37,6 @@ public:
 	static void Print(std::string s = "") {
 		std::string p = s + "\n";
 		printf(p.c_str());
-		fflush(stdout);
 	}
 
 	//static void parse_check(char* expected, char* found)

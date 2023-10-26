@@ -26,7 +26,7 @@ public:
 	void ParseFromFile(FILE* file, int id);
 
 	Vec3 position;
-	Vec3 color_diffuse;
+	Vec3 albedo;
 	Vec3 color_specular;
 	double shininess = 0;
 	double radius = 0;

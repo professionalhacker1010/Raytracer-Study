@@ -156,7 +156,7 @@ struct Vec2 {
     operator std::string() const { return " " + std::to_string(c[0]) + " " + std::to_string(c[1]); }
 
     static Vec2 BaryCoord(const Vec2& v1, const Vec2& v2, const Vec2& v3, const Vec3& coord) {
-        return coord[0] * v1 + coord[1] * v2 + coord[3] * v3;
+        return coord[0] * v1 + coord[1] * v2 + coord[2] * v3;
     }
 
     void Set(float x, float y) { c[0] = x; c[1] = y; }

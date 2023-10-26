@@ -1,5 +1,6 @@
 #include "Mesh.h"
 #include "Surface.h"
+#include "Util.h"
 
 Mesh::Mesh(const char* objFile, const char* texFile, int meshId)
 {
@@ -12,25 +13,36 @@ Mesh::Mesh(const char* objFile, const char* texFile, int meshId)
     int UVs = 0, Ns = 0, Ps = 0, a, b, c, d, e, f, g, h, i, idx = 0;
     bool init = false;
     FILE* file = fopen(objFile, "r");
+
+    int debug = 0;
     while (!feof(file))
     {
         char line[1024] = { 0 };
         fgets(line, 1023, file);
         float norm[3] = { 0 }, pos[3] = { 0 }, uv[2] = { 0 };
-        if (line == strstr(line, "vt ")) UVs++,
+        if (line == strstr(line, "vt ")) {
+            UVs++;
             sscanf(line + 3, "%f %f", &uv[0], &uv[1]);
-        else if (line == strstr(line, "vn ")) Ns++,
+            UV[UVs].Set(uv[0], uv[1]);
+        }
+        else if (line == strstr(line, "vn ")) {
+            Ns++;
             sscanf(line + 3, "%f %f %f", &norm[0], &norm[1], &norm[2]);
-        else if (line[0] == 'v') Ps++,
-            sscanf(line + 2, "%f %f %f", &pos[0], &pos[1], &pos[2]);
+            N[Ns].Set(norm[0], norm[1], norm[2]);
+        }
+        else if (line[0] == 'v') {
+           Ps++;
+           sscanf(line + 2, "%f %f %f", &pos[0], &pos[1], &pos[2]);
+           P[Ps].Set(pos[0], pos[1], pos[2]);
+        }
 
-        N[Ns].Set(norm[0], norm[1], norm[2]);
-        P[Ps].Set(pos[0], pos[1], pos[2]);
-        UV[UVs].Set(uv[0], uv[1]);
-
-        if (line[0] != 'f') continue; else
-            sscanf(line + 2, "%i/%i/%i %i/%i/%i %i/%i/%i",
+        if (line[0] != 'f') {
+            continue;
+        }
+        else {
+            sscanf(line + 3, "%i/%i/%i %i/%i/%i %i/%i/%i",
                 &a, &b, &c, &d, &e, &f, &g, &h, &i);
+        }
 
         //if (!init) {
         //    init = true;
@@ -38,9 +50,10 @@ Mesh::Mesh(const char* objFile, const char* texFile, int meshId)
         //    vertData = (TriVerts*)_aligned_malloc(sizeof(TriVerts) * numTris, ALIGN);
         //}
 
-        bindPoseTris[idx].verts[0] = P[a]; vertData[idx].norm[0] = N[b]; vertData[idx].uv[0] = UV[c];
-        bindPoseTris[idx].verts[1] = P[d]; vertData[idx].norm[1] = N[e]; vertData[idx].uv[1] = UV[f];
-        bindPoseTris[idx].verts[2] = P[g]; vertData[idx].norm[2] = N[h]; vertData[idx].uv[2] = UV[i];
+        bindPoseTris[idx].verts[0] = P[a]; vertData[idx].norm[0] = N[c]; vertData[idx].uv[0] = UV[b];
+        bindPoseTris[idx].verts[1] = P[d]; vertData[idx].norm[1] = N[f]; vertData[idx].uv[1] = UV[e];
+        bindPoseTris[idx].verts[2] = P[g]; vertData[idx].norm[2] = N[i]; vertData[idx].uv[2] = UV[h];
+
         idx++;
     }
     fclose(file);
@@ -53,7 +66,7 @@ Mesh::Mesh(const char* objFile, const char* texFile, int meshId)
         tris[i] = bindPoseTris[i];
     }
     id = meshId;
-}
+ }
 
 Mesh::~Mesh()
 {

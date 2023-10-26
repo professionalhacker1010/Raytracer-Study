@@ -2,7 +2,8 @@
 
 Camera::Camera()
 {
-	position = Vec3(0.0f, 0.0f, 0.0f);
+	pos = Vec3::Zero();
+	invPos = Vec3::Zero();
 
 	UpdateRays();
 }
@@ -26,7 +27,7 @@ void Camera::UpdateRays()
 	for (int h = 0; h < HEIGHT; h++) for (int w = 0; w < WIDTH; w++) {
 		float y = yMin + (2 * yMax * h / (float)HEIGHT);
 		float x = xMin + (2 * xMax * w / (float)WIDTH);
-		Vec3 dir = Vec3(x, y, -1.0f) - position;
-		rays[w][h].Set(position, dir.Normalized());
+		Vec3 dir = Vec3(x, y, -1.0f);
+		rays[w][h].Set(Vec3::Zero(), dir.Normalized());
 	}
 }

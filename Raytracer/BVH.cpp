@@ -47,7 +47,6 @@ void BVH::Set(Tri* triangles, unsigned int numTris)
 	this->numTris = numTris;
 
 	if (debugPrint) Util::Print("Total tris in scene = " + std::to_string(numTris));
-	if (debugPrint) Util::Print("Sizeof BVH node = " + std::to_string(sizeof(BVHNode)));
 }
 
 void BVH::Rebuild()
@@ -316,24 +315,6 @@ void BVHInstance::Set(BVH* bvHeirarchy, MeshInstance* meshInstance)
 {
 	bvh = bvHeirarchy;
 	mesh = meshInstance;
-
-	
-	//mesh->SetOnTransform([this](Mat4 transform) {
-	//	worldSpaceBounds = AABB(Vec3(FLT_MAX), Vec3(-FLT_MAX));
-	//	invTransform = transform;
-	//	invTransform.Invert();
-	//	//calculate the transformed bounding box for the bvh instance
-	//	for (int i = 0; i < 8; i++) {
-	//		worldSpaceBounds.Grow(Mat4::Transform(
-	//			Vec3(
-	//				i % 2 == 0 ? bvh->GetBounds().max[0] : bvh->GetBounds().min[0],
-	//				(i % 4) < 2 ? bvh->GetBounds().max[1] : bvh->GetBounds().min[1],
-	//				i < 4 ? bvh->GetBounds().max[2] : bvh->GetBounds().min[2]
-	//			),
-	//			transform
-	//		));
-	//	}
-	//});
 }
 
 bool BVHInstance::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
