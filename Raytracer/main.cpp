@@ -1,6 +1,5 @@
 #include <windows.h>
 #include <stdlib.h>
-
 #include <gl/glew.h>
 #include <gl/glu.h>
 #include <gl/glut.h>
@@ -36,13 +35,16 @@ constexpr int NUM_MESHES = 1;
 BVH* bvh[NUM_MESHES];
 Mesh* meshes[NUM_MESHES];
 
-constexpr int NUM_MESH_INST = 4;
+constexpr int NUM_MESH_INST = 9;
 BVHInstance* bvhInstances;
 MeshInstance* meshInstances;
 
 constexpr int NUM_LIGHTS = 1;
 Light lights[MAX_LIGHTS];
 Vec3 ambientLight;
+
+int skyWidth, skyHeight, skyBpp;
+float* skyPixels;
 
 //rendering
 RenderQuad* renderQuad;
@@ -51,8 +53,9 @@ GLubyte pixelData[HEIGHT][WIDTH][3];
 //debug
 int frames = 0;
 long int triIntersections = 0;
+clock_t totalTime;
 clock_t startFrameTime = 0;
-clock_t totalTime = 0;
+clock_t totalDrawTime = 0;
 clock_t raycastTime = 0;
 clock_t drawTime = 0;
 clock_t buildTime = 0;
@@ -111,20 +114,21 @@ bool Init()
 
 	
 	// load HDR sky
-	int skyWidth, skyHeight, skyBpp;
 	int bpp = 0;
-	float* skyPixels = stbi_loadf("assets/sky_19.hdr", &skyWidth, &skyHeight, &skyBpp, 0);
+	skyPixels = stbi_loadf("Assets/sky_19.hdr", &skyWidth, &skyHeight, &skyBpp, 0);
 	for (int i = 0; i < skyWidth * skyHeight * 3; i++) skyPixels[i] = sqrtf(skyPixels[i]);
 
 	tlas->Rebuild();
 
 	lights[0].position = Vec3(3, 10, 2);
-	lights[0].color = Vec3(255, 255, 191) / 255.0f;
-	ambientLight = Vec3(40, 36, 59) / 255.0f;
+	lights[0].color = Vec3(255, 255, 255) / 255.0f;
+	lights[1].position = Vec3(3, 10, -2);
+	lights[1].color = Vec3(255, 255, 191) / 255.0f;
+	ambientLight = Vec3(60, 56, 79) / 255.0f;
 
 	renderQuad = new RenderQuad();
 	camera = &Camera::Get();
-	camera->SetPosition(Vec3(-2.0f, 0.0f, 2.0f));
+	//->SetTransform(Vec3(-2.0f, 0.0f, 2.0f), Mat4::Identity());
 	return true;
 }
 
@@ -140,8 +144,7 @@ inline Vec3 RGB8toRGB32F(unsigned int c)
 /// <summary>
 /// check if ray intersects with triangle or sphere, returns vertex at closest intersection point and id of hit object
 /// </summary>
-std::atomic_int zeroes;
-bool RayCast(Ray ray, Vertex& outVertex, HitInfo& hit, int ignoreID = 0) {
+bool RayCast(Ray& ray, Vertex& outVertex, HitInfo& hit, int ignoreID = 0) {
 	//step through bvh for triangles
 	tlas->CalculateIntersection(ray, hit);
 	
@@ -175,32 +178,32 @@ bool RayCast(Ray ray, Vertex& outVertex, HitInfo& hit, int ignoreID = 0) {
 /// <summary>
 /// raycast from a point to each light source, return phong shading color with shadows
 /// </summary>
-Vec3 CastShadowRays(const Vertex& vertex, int ignoreID = 0) {
+Vec3 CastShadowRays(const Vertex& vertex) {
 	Vec3 color = ambientLight;
 
 	//specular light setup
 	//Vec3 toCamera = Camera::Get().position - vertex.position;
 	//toCamera.Normalize();
 	Ray ray;
-	ray.origin = vertex.position;
+	ray.origin = vertex.position + vertex.normal * 0.001f;
 	for (int i = 0; i < NUM_LIGHTS; i++) {
 		//set direction and max dist of raycast
 		Vec3 dir = (lights[i].position + camera->GetInvPosition()) - vertex.position;
 		float dist = dir.Length();
 		dir *= 1.0f / dist;
-		ray.Set(vertex.position, dir, dist);
+		ray.direction = dir;
+		ray.dInv = Vec3::One() / dir;
 
 		//if the raycast hit something don't calculate lighting
-		//if (RayCast(ray, nullptr, ignoreID)) {
-		//	continue;
-		//}
+		HitInfo hitInfo;
+		if (tlas->CalculateIntersection(ray, hitInfo)) {
+			continue;
+		}
 
-		float diffuse = 0;
 		float specular = 0;
 
 		//diffuse light
-		diffuse = Vec3::Dot(vertex.normal, ray.direction);
-		diffuse = fmaxf(diffuse, 0.0f);
+		float diffuse = fmaxf(Vec3::Dot(vertex.normal, ray.direction), 0.0f);
 
 		//specular light
 		//Vec3 reflector = vertex.normal * (2. * diffuseStrength);
@@ -208,8 +211,6 @@ Vec3 CastShadowRays(const Vertex& vertex, int ignoreID = 0) {
 		//double specularStrength = pow(Vec3::Dot(toCamera, reflectedLightVector), vertex.shininess);
 		//specularStrength = fmax(specularStrength, 0.);
 		//specular = vertex.color_specular * specularStrength;
-
-		//TODO add attenuation factor
 
 		//final color
 		color += (diffuse + specular) * lights[i].color; //* (1.0f / (dist * dist));
@@ -223,40 +224,83 @@ Vec3 CastShadowRays(const Vertex& vertex, int ignoreID = 0) {
 	return color;
 }
 
-void DrawScene()
-{
+Vec3 CastMirrorRays(Ray& ray, Vertex& vertex, int rayDepth = 0) {
+	if (rayDepth >= 4) {
+		return Vec3::Zero();
+	}
+
+	Ray secondary;
+	Vec3 dir = (ray.direction - 2 * vertex.normal * Vec3::Dot(vertex.normal, ray.direction)).Normalized();
+	Vec3 pos = vertex.position + dir * 0.001f;
+	secondary.Set(pos, dir);
+	
+
+	HitInfo hitInfo;
+	int hit = RayCast(secondary, vertex, hitInfo);
+
+	if (hit) {
+		if (hitInfo.meshInstId % 3 != 0)
+			return CastShadowRays(vertex);
+		else
+			return CastMirrorRays(ray, vertex, rayDepth + 1);
+	}
+	else {
+		//draw skybox
+		unsigned int u = skyWidth * atan2f(secondary.direction[2], secondary.direction[0]) * INV2PI - 0.5f;
+		unsigned int v = skyHeight * acosf(secondary.direction[1]) * INVPI - 0.5f;
+		unsigned int skyIdx = u + v * skyWidth;
+		if (skyIdx < skyWidth * skyHeight)
+			return Vec3::Min(Vec3::One(), 0.65f * Vec3(skyPixels[skyIdx * 3], skyPixels[skyIdx * 3 + 1], skyPixels[skyIdx * 3 + 2]));
+	}
+
+	return Vec3::Zero();
+}
+
+void AnimateScene() {
 	clock_t c = clock();
 
 	float deltaTime = (float)(c - startFrameTime) / 1000.0f;
+	totalTime += (c - startFrameTime);
 	startFrameTime = c;
+	
 
+	//mesh animation
 	for (int i = 0; i < NUM_MESHES; i++) {
-		meshes[i]->Animate(deltaTime);
+		//meshes[i]->Animate(deltaTime);
 	}
 
-	// animate the scene
+	//update camera transform
+	static float angle = 0; angle += 0.05f;
+	Mat4 M1 = Mat4::CreateRotationY(angle);// M2 = Mat4::CreateRotationX(-0.65f) * M1;
+	Vec3 camPos = Mat4::Transform(Vec3(0.0f, 1.0f, 6.5f), M1);
+	camera->SetTransform(camPos, M1);
+
+	//mesh instance transformations
 	static float a[16] = { 0 }, h[16] = { 5, 4, 3, 2, 1, 5, 4, 3 }, s[16] = { 0 };
-	for (int i = 0, x = 0; x < 2; x++) for (int y = 0; y < 2; y++, i++)
+	for (int i = 0, x = 0; x < 3; x++) for (int y = 0; y < 3; y++, i++)
 	{
 		Mat4 R, T = Mat4::CreateTranslation(Vec3((x - 1.5f) * 2.5f, 0, (y - 1.5f) * 2.5f));
 		if ((x + y) & 1) R = Mat4::CreateRotationX(a[i]) * Mat4::CreateRotationZ(a[i]);
 		else R = Mat4::CreateTranslation(Vec3(0, h[i / 2], 0));
 		if ((a[i] += (((i * 13) & 7) + 2) * 0.005f) > 2 * PI) a[i] -= 2 * PI;
 		if ((s[i] -= 0.01f, h[i] += s[i]) < 0) s[i] = 0.2f;
-		Mat4 transform = Mat4::CreateScale(0.75f) * R * T * Mat4::CreateTranslation(camera->GetInvPosition());
+		Mat4 transform = Mat4::CreateScale(0.75f) * R * T * Mat4::CreateTranslation(Vec3(2.0f, 0.0f, 0.0f));
 		meshInstances[i].SetTransform(transform);
 		bvhInstances[i].SetTransform(transform);
 	}
 
 	clock_t startBuildTime = clock();
 	for (int i = 0; i < NUM_MESHES; i++) {
-		bvh[i]->Refit();
+		//bvh[i]->Refit();
 	}
 	tlas->Rebuild();
 	c = clock();
 	buildTime += (c - startBuildTime);
+}
 
-	clock_t startDrawTime = c;
+void DrawScene()
+{
+	clock_t startDrawTime = clock();
 
 	Vertex vert;
 	const int tileSize = 4;
@@ -264,35 +308,48 @@ void DrawScene()
 
 #pragma omp parallel for schedule(dynamic) reduction(+:raycastTime), private(y, u, v, i, vert)
 	for (x = 0; x < WIDTH; x+=tileSize) {
+		
+		Ray ray;
+		Vec3 color;
 		for (y = 0; y < HEIGHT; y += tileSize) {
 			for (u = x; u < x + tileSize; u++) for (v = y; v < y + tileSize; v++) {
 				//if i used x and y here it gave a kinda cool pixellated effect lol
 				clock_t startRayTime = clock();
-				HitInfo hitInfo;
-				int hit = RayCast(Camera::Get().GetRay(u, v), vert, hitInfo);
+				for (i = 0; i < 4; i++) {
+					ray = Camera::Get().GetRay(u, v);
+					
+
+					HitInfo hitInfo;
+					int hit = RayCast(ray, vert, hitInfo);
+
+					color = Vec3::Zero();
+					if (hit) {
+						if (hitInfo.meshInstId % 3 != 0)
+							color = CastShadowRays(vert) * 255.0f;
+						else
+							color = CastMirrorRays(ray, vert) * 255.0f;
+					}
+					else {
+						//draw skybox
+						unsigned int u = skyWidth * atan2f(ray.direction[2], ray.direction[0]) * INV2PI - 0.5f;
+						unsigned int v = skyHeight * acosf(ray.direction[1]) * INVPI - 0.5f;
+						unsigned int skyIdx = u + v * skyWidth;
+						if (skyIdx < skyWidth * skyHeight)
+							color = Vec3::Min(Vec3::One(), 0.65f * Vec3(skyPixels[skyIdx * 3], skyPixels[skyIdx * 3 + 1], skyPixels[skyIdx * 3 + 2])) * 255.0f;
+					}
+				}
+
 				raycastTime += (clock() - startRayTime);
-				if (hit) {
-					// cast shadow ray
-					Vec3 color = CastShadowRays(vert, hitInfo.triId) * 255.0f;
-					//Vec3 color = vert.color_diffuse * 255.0f;
-					for (i = 0; i < 3; i++) {
-						pixelData[v][u][i] = (GLubyte)(color[i]);
-					}
+
+				for (i = 0; i < 3; i++) {
+					pixelData[v][u][i] = (GLubyte)color[i];
 				}
-				else {
-					for (i = 0; i < 3; i++) {
-						pixelData[v][u][i] = (GLubyte)0;
-					}
-				}
-				
 			}
 		}
 	}
 
 	drawTime += (clock() - startDrawTime);
 	triIntersections += meshes[0]->tris[0].debug();
-
-	//system("pause");
 	glutPostRedisplay();
 
 	frames++;
@@ -307,16 +364,18 @@ void Display()
 void Idle()
 {
 	clock_t startAnimTime = clock();
+	AnimateScene();
 	DrawScene();
-	totalTime += clock() - startAnimTime;
+	totalDrawTime += clock() - startAnimTime;
 }
 
 void OnKeyDown(unsigned char key, int x, int y) {
 	if (key == 'Q' || key == 'q') exit(0);
+	if (key == 'p') system("pause");
 }
 
 void OnExit() {
-	Util::Print("Avg FPS = " + std::to_string((float)frames / ((float)totalTime / 1000.0f)));
+	Util::Print("Avg FPS = " + std::to_string((float)frames / ((float)totalDrawTime / 1000.0f)));
 	Util::Print("Avg BVH construction secs = " + std::to_string(buildTime / ((float)frames * 1000.0f)));
 	Util::Print("Avg tri intersections = " + std::to_string(triIntersections / ((float)frames)));
 	Util::Print("Avg ms per raycast = " + std::to_string(raycastTime / ((float)(WIDTH * HEIGHT))));

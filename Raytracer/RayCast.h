@@ -28,6 +28,14 @@ struct Ray {
 		dInv = Vec3::One() / direction; //Vec3(1.0f / direction[0], 1.0f / direction[1], 1.0f / direction[2]);
 	}
 
+	const Ray& operator = (const Ray& other) {
+		if (this == &other) return *this;
+		origin4 = other.origin4;
+		direction4 = other.direction4;
+		dInv4 = other.dInv4;
+		return *this;
+	}
+
 	void Set(Vec3 origin, Vec3 direction, float distance = FLT_MAX) {
 		this->origin = origin;
 		this->direction = direction;

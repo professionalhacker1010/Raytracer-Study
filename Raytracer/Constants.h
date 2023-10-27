@@ -1,5 +1,7 @@
 #pragma once
 #define PI 3.14159265358979323
+#define INV2PI 0.15915494309
+#define INVPI 0.31830988618
 #define MAX_TRIANGLES 2000
 #define MAX_SPHERES 10
 #define MAX_LIGHTS 10
@@ -18,3 +20,4 @@
 
 #define _MM_SHUFFLER( xi, yi, zi, wi ) _MM_SHUFFLE( wi, zi, yi, xi )
 #define ALIGN 64
+
