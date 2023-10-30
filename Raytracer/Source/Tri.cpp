@@ -1,7 +1,6 @@
+#include "stdafx.h"
 #include "Tri.h"
 #include "RayCast.h"
-#include "Util.h"
-#include <atomic>
 
 std::atomic_int intersectionChecks;
 

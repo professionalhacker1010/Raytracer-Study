@@ -1,6 +1,6 @@
 #pragma once
+
 #include "Constants.h"
-#include <gl/glew.h>
 
 class RenderQuad {
 public:
@@ -9,6 +9,8 @@ public:
 	void Draw(const void* data);
 private:
 	GLuint VAO, VBO, EBO;
+	//Shader* shader;
+	//GLuint texture;
 	GLuint vertexShader, fragmentShader, shaderProgram;
 	GLuint* texture;
 

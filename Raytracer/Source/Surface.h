@@ -1,4 +1,7 @@
 #pragma once
+// Template, IGAD version 2
+// IGAD/NHTV/UU - Jacco Bikker - 2006-2021
+
 // 32-bit surface container
 class Surface
 {
@@ -17,7 +20,7 @@ public:
 	void Clear(unsigned int c);
 	void Line(float x1, float y1, float x2, float y2, unsigned int c);
 	void Plot(int x, int y, unsigned int c);
-	void LoadImage(const char* file);
+	void LoadImageFile(const char* file);
 	void CopyTo(Surface* dst, int x, int y);
 	void Box(int x1, int y1, int x2, int y2, unsigned int color);
 	void Bar(int x1, int y1, int x2, int y2, unsigned int color);

@@ -5,9 +5,17 @@
       <Configuration>Debug</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Win32">
       <Configuration>Release</Configuration>
       <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -24,7 +32,20 @@
     <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -37,15 +58,31 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <LibraryPath>C:\Users\18588\Documents\VSProjects\RaytracerStudy\Raytracer\Source\OpenCL\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
+    <LibraryPath>C:\Users\18588\Documents\VSProjects\RaytracerStudy\Raytracer\Source\OpenCL\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -54,15 +91,37 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>glew-2.2.0-win32\glew-2.2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAs>Default</CompileAs>
       <OpenMPSupport>true</OpenMPSupport>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>glew-2.2.0-win32\glew-2.2.0\lib\Release\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glew32.lib;d3d12.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\18588\Documents\VSProjects\RaytracerStudy\Raytracer\Source\glew\lib;C:\Users\18588\Documents\VSProjects\RaytracerStudy\Raytracer\Source\GLFW\lib-vc2022;C:\Users\18588\Documents\VSProjects\RaytracerStudy\Raytracer\Source\OpenCL\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;glew32.lib;glfw3.lib;OpenCL.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <CompileAs>Default</CompileAs>
+      <OpenMPSupport>true</OpenMPSupport>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)\Source\glew\lib;$(SolutionDir)\Raytracer\Source\GLFW\lib-vc2022;$(SolutionDir)\Raytracer\Source\OpenCL\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;glew32.lib;glfw3.lib;OpenCL.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -74,16 +133,42 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>glew-2.2.0-win32\glew-2.2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAs>Default</CompileAs>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>glew-2.2.0-win32\glew-2.2.0\lib\Release\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glew32.lib;d3d12.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\18588\Documents\VSProjects\RaytracerStudy\Raytracer\Source\glew\lib;C:\Users\18588\Documents\VSProjects\RaytracerStudy\Raytracer\Source\GLFW\lib-vc2022;C:\Users\18588\Documents\VSProjects\RaytracerStudy\Raytracer\Source\OpenCL\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;glew32.lib;glfw3.lib;OpenCL.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <CompileAs>Default</CompileAs>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(SolutionDir)\Source\glew\lib;$(SolutionDir)\Raytracer\Source\GLFW\lib-vc2022;$(SolutionDir)\Raytracer\Source\OpenCL\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;glew32.lib;glfw3.lib;OpenCL.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -91,49 +176,64 @@
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AABB.h" />
-    <ClInclude Include="BVH.h" />
-    <ClInclude Include="Camera.h" />
-    <ClInclude Include="CImg-2.3.5\CImg.h" />
-    <ClInclude Include="Constants.h" />
-    <ClInclude Include="d3dx12.h" />
-    <ClInclude Include="glext.h" />
-    <ClInclude Include="khrplatform.h" />
-    <ClInclude Include="Light.h" />
-    <ClInclude Include="Mesh.h" />
-    <ClInclude Include="MeshInstance.h" />
-    <ClInclude Include="Octree.h" />
-    <ClInclude Include="picLibrary\pic.h" />
-    <ClInclude Include="Quad.h" />
-    <ClInclude Include="RayCast.h" />
-    <ClInclude Include="RenderQuad.h" />
-    <ClInclude Include="Sphere.h" />
-    <ClInclude Include="stb_image.h" />
-    <ClInclude Include="stdafx.h" />
-    <ClInclude Include="Surface.h" />
-    <ClInclude Include="targetver.h" />
-    <ClInclude Include="tests.h" />
-    <ClInclude Include="Tri.h" />
-    <ClInclude Include="Util.h" />
-    <ClInclude Include="Math.h" />
-    <ClInclude Include="Vertex.h" />
+    <ClCompile Include="Source\Application.cpp" />
+    <ClCompile Include="Source\BVH.cpp" />
+    <ClCompile Include="Source\Camera.cpp" />
+    <ClCompile Include="Source\CLBuffer.cpp" />
+    <ClCompile Include="Source\External\template.cpp" />
+    <ClCompile Include="Source\GLTexture.cpp" />
+    <ClCompile Include="Source\main.cpp" />
+    <ClCompile Include="Source\Math.cpp" />
+    <ClCompile Include="Source\Mesh.cpp" />
+    <ClCompile Include="Source\MeshInstance.cpp" />
+    <ClCompile Include="Source\Octree.cpp" />
+    <ClCompile Include="Source\Quad.cpp" />
+    <ClCompile Include="Source\RayCast.cpp" />
+    <ClCompile Include="Source\RenderQuad.cpp" />
+    <ClCompile Include="Source\Shader.cpp" />
+    <ClCompile Include="Source\stdafx.cpp" />
+    <ClCompile Include="Source\Surface.cpp" />
+    <ClCompile Include="Source\Tri.cpp" />
+    <ClCompile Include="Source\Util.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BVH.cpp" />
-    <ClCompile Include="Camera.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="Math.cpp" />
-    <ClCompile Include="Mesh.cpp" />
-    <ClCompile Include="MeshInstance.cpp" />
-    <ClCompile Include="Octree.cpp" />
-    <ClCompile Include="Quad.cpp" />
-    <ClCompile Include="RayCast.cpp" />
-    <ClCompile Include="RenderQuad.cpp" />
-    <ClCompile Include="Sphere.cpp" />
-    <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="Surface.cpp" />
-    <ClCompile Include="Tri.cpp" />
-    <ClCompile Include="Util.cpp" />
+    <ClInclude Include="Source\AABB.h" />
+    <ClInclude Include="Source\Application.h" />
+    <ClInclude Include="Source\BVH.h" />
+    <ClInclude Include="Source\Camera.h" />
+    <ClInclude Include="Source\CLBuffer.h" />
+    <ClInclude Include="Source\Constants.h" />
+    <ClInclude Include="Source\External\d3dx12.h" />
+    <ClInclude Include="Source\External\glad.h" />
+    <ClInclude Include="Source\External\khrplatform.h" />
+    <ClInclude Include="Source\External\stb_image.h" />
+    <ClInclude Include="Source\GLTexture.h" />
+    <ClInclude Include="Source\Light.h" />
+    <ClInclude Include="Source\Math.h" />
+    <ClInclude Include="Source\Mesh.h" />
+    <ClInclude Include="Source\MeshInstance.h" />
+    <ClInclude Include="Source\Octree.h" />
+    <ClInclude Include="Source\OpenCL\inc\CL\cl.h" />
+    <ClInclude Include="Source\OpenCL\inc\CL\cl.hpp" />
+    <ClInclude Include="Source\OpenCL\inc\CL\cl_d3d10.h" />
+    <ClInclude Include="Source\OpenCL\inc\CL\cl_d3d11.h" />
+    <ClInclude Include="Source\OpenCL\inc\CL\cl_dx9_media_sharing.h" />
+    <ClInclude Include="Source\OpenCL\inc\CL\cl_ext.h" />
+    <ClInclude Include="Source\OpenCL\inc\CL\cl_gl.h" />
+    <ClInclude Include="Source\OpenCL\inc\CL\cl_gl_ext.h" />
+    <ClInclude Include="Source\OpenCL\inc\CL\cl_platform.h" />
+    <ClInclude Include="Source\OpenCL\inc\CL\opencl.h" />
+    <ClInclude Include="Source\Quad.h" />
+    <ClInclude Include="Source\RayCast.h" />
+    <ClInclude Include="Source\RenderQuad.h" />
+    <ClInclude Include="Source\Shader.h" />
+    <ClInclude Include="Source\stdafx.h" />
+    <ClInclude Include="Source\Surface.h" />
+    <ClInclude Include="Source\targetver.h" />
+    <ClInclude Include="Source\tests.h" />
+    <ClInclude Include="Source\Tri.h" />
+    <ClInclude Include="Source\Util.h" />
+    <ClInclude Include="Source\Vertex.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

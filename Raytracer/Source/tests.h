@@ -1,7 +1,5 @@
 #pragma once
-#include "Math.h"
-#include "util.h"
-#include <string>
+#include "Util.h"
 
 struct Vec3Test {
 	static void ScopeTest1(Vec3* v) {

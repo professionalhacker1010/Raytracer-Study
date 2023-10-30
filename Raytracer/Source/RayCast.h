@@ -1,6 +1,5 @@
 #pragma once
 #include "Math.h"
-#include <smmintrin.h>
 
 struct HitInfo {
 	float distance = FLT_MAX;

@@ -1,17 +1,11 @@
 // Template, IGAD version 2
 // IGAD/NHTV/UU - Jacco Bikker - 2006-2020
 
+#include "stdafx.h"
 #include "Surface.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#define STBI_NO_PSD
-#define STBI_NO_PIC
-#define STBI_NO_PNM
-#include "stb_image.h"
 
-#pragma comment( linker, "/subsystem:windows /ENTRY:mainCRTStartup" )
-
-
+//#pragma comment( linker, "/subsystem:windows /ENTRY:mainCRTStartup" )
 
 // surface implementation
 // ----------------------------------------------------------------------------
@@ -31,10 +25,10 @@ Surface::Surface(const char* file) : pixels(0), width(0), height(0)
 	FILE* f = fopen(file, "rb");
 	if (!f) printf("File not found: %s", file);
 	fclose(f);
-	LoadImage(file);
+	LoadImageFile(file);
 }
 
-void Surface::LoadImage(const char* file)
+void Surface::LoadImageFile(const char* file)
 {
 	int n;
 	unsigned char* data = stbi_load(file, &width, &height, &n, 0);

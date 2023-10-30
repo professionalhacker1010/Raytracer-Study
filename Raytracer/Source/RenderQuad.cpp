@@ -1,7 +1,5 @@
+#include "stdafx.h"
 #include "RenderQuad.h"
-#include <stdlib.h>
-#include <GL/glu.h>
-#include <GL/glut.h>
 
 RenderQuad::RenderQuad()
 {
@@ -63,7 +61,7 @@ void RenderQuad::Draw(const void* data)
 	glBindTexture(GL_RGB, *texture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
 	glUniform1i(glGetUniformLocation(shaderProgram, "renderTexture"), 0); // 0 is the texture unit
-	
+
 	glUseProgram(shaderProgram);
 	glBindVertexArray(VAO);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

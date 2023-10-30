@@ -1,5 +1,4 @@
 #include "RayCast.h"
-#include "Util.h"
 #include "Constants.h"
 
 float Ray::CalculatePlaneIntersection(const Vec3& norm, const Ray& ray, const float d)

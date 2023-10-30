@@ -1,11 +1,6 @@
 #pragma once
 #include "AABB.h"
-#include "Constants.h"
 #include "Tri.h"
-#include <xmmintrin.h>
-#include <ctime>
-#include <atomic>
-#include <functional>
 
 struct Ray;
 struct HitInfo;

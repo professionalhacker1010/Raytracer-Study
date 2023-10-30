@@ -19,5 +19,10 @@
 #define fov 60.0
 
 #define _MM_SHUFFLER( xi, yi, zi, wi ) _MM_SHUFFLE( wi, zi, yi, xi )
-#define ALIGN 64
+#define ALIGNSIZE 64
 
+
+// basic types
+typedef unsigned char uchar;
+typedef unsigned int uint;
+typedef unsigned short ushort;

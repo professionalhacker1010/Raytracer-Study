@@ -1,10 +1,11 @@
 #pragma once
+//#include "External/stdafx.h"
+#include "Surface.h"
 #include "Math.h"
 #include "Constants.h"
 #include "Tri.h"
 #include "BVH.h"
 
-class Surface;
 
 class Mesh {
 public:

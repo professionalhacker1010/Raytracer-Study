@@ -1,5 +1,5 @@
+#include "stdafx.h"
 #include "BVH.h"
-#include "util.h"
 #include "RayCast.h"
 #include "MeshInstance.h"
 #include "Mesh.h"
@@ -42,8 +42,8 @@ BVH::BVH(Tri* triangles, unsigned int numTris)
 void BVH::Set(Tri* triangles, unsigned int numTris)
 {
 	tris = triangles;
-	nodes = (BVHNode*)_aligned_malloc(sizeof(BVHNode) * numTris * 2, ALIGN); //new BVHNode[numTris * 2];//
-	triIndices = (unsigned int*)_aligned_malloc(sizeof(unsigned int) * numTris, ALIGN); //new unsigned int[numTris]; //
+	nodes = (BVHNode*)MALLOC64(sizeof(BVHNode) * numTris * 2); //new BVHNode[numTris * 2];//
+	triIndices = (unsigned int*)MALLOC64(sizeof(unsigned int) * numTris); //new unsigned int[numTris]; //
 	this->numTris = numTris;
 
 	if (debugPrint) Util::Print("Total tris in scene = " + std::to_string(numTris));
@@ -303,8 +303,8 @@ BVH::~BVH()
 {
 	//delete[] nodes;
 	//delete[] triIndices;
-	_aligned_free(nodes);
-	_aligned_free(triIndices);
+	FREE64(nodes);
+	FREE64(triIndices);
 }
 
 BVHInstance::BVHInstance(BVH* bvHeirarchy, MeshInstance* meshInstance) {
@@ -357,7 +357,7 @@ TLAS::TLAS(BVHInstance* bvhInstances, int numInstances)
 {
 	blas = bvhInstances;
 	numBLAS = (unsigned int)numInstances;
-	nodes = (TLASNode*)_aligned_malloc(sizeof(TLASNode) * (2 * numInstances + 1), ALIGN);
+	nodes = (TLASNode*)MALLOC64(sizeof(TLASNode) * (2 * numInstances + 1));
 }
 
 void TLAS::Rebuild() {
@@ -482,5 +482,5 @@ bool TLAS::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx) {
 
 
 TLAS::~TLAS() {
-	_aligned_free(nodes);
+	FREE64(nodes);
 }

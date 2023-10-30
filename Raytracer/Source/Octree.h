@@ -1,7 +1,6 @@
 #pragma once
-#include <map>
-#include "util.h"
-#include "Math.h"
+
+#include "stdafx.h"
 #include "Tri.h"
 #include "Constants.h"
 

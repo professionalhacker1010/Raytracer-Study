@@ -1,6 +1,5 @@
 #pragma once
 #include "Math.h"
-#include <smmintrin.h>
 
 struct AABB {
 	AABB() {}

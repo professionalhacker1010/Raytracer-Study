@@ -1,11 +1,10 @@
 #include "Mesh.h"
-#include "Surface.h"
-#include "Util.h"
+#include "Constants.h"
 
 Mesh::Mesh(const char* objFile, const char* texFile, int meshId)
 {
-    bindPoseTris = (Tri*)_aligned_malloc(sizeof(Tri) * MAX_TRIANGLES, ALIGN); //new Tri[MAX_TRIANGLES];//
-    vertData = (TriVerts*)_aligned_malloc(sizeof(TriVerts) * MAX_TRIANGLES, ALIGN);// new TriVerts[MAX_TRIANGLES];//
+    bindPoseTris = (Tri*)_aligned_malloc(sizeof(Tri) * MAX_TRIANGLES, ALIGNSIZE); //new Tri[MAX_TRIANGLES];//
+    vertData = (TriVerts*)_aligned_malloc(sizeof(TriVerts) * MAX_TRIANGLES, ALIGNSIZE);// new TriVerts[MAX_TRIANGLES];//
 
     texture = new Surface(texFile);
     Vec2 UV[1024];
@@ -60,7 +59,7 @@ Mesh::Mesh(const char* objFile, const char* texFile, int meshId)
 
     numTris = idx;
 
-    tris = (Tri*)_aligned_malloc(sizeof(Tri) * numTris, ALIGN); //new Tri[numTris];//
+    tris = (Tri*)_aligned_malloc(sizeof(Tri) * numTris, ALIGNSIZE); //new Tri[numTris];//
     for (int i = 0; i < numTris; i++) {
         bindPoseTris[i].CachedCalculations();
         tris[i] = bindPoseTris[i];

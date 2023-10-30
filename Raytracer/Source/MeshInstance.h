@@ -1,7 +1,6 @@
 #pragma once
 #include "Math.h"
 #include "AABB.h"
-#include <functional>
 class Mesh;
 
 class MeshInstance {

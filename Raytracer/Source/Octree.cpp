@@ -1,7 +1,6 @@
 #include "Octree.h"
 #include "RayCast.h"
 
-
 Octree::Octree(Vec3 maxBounds, Vec3 minBounds, Tri triangles[MAX_TRIANGLES], int numTris)
 {
 	//root = new Node();
@@ -50,7 +49,7 @@ Node* Octree::FindNode(Node* root, const Vec3& pos)
 	if (root->children[0] == nullptr) return root;
 	//if (root->tris.empty()) return root;
 
-	if (Util::withinBounds(pos, root->maxBounds, root->minBounds)) {
+	if (Vec3::WithinBounds(pos, root->maxBounds, root->minBounds)) {
 		if (pos[0] > root->center[0]) {
 			if (pos[1] > root->center[1]) {
 				if (pos[2] > root->center[2]) return FindNode(root->children[(int)BACK_RIGHT_TOP], pos);
@@ -92,7 +91,7 @@ bool Octree::CalculateIntersection(const Ray& ray, HitInfo* out, int ignoreID)
 
 	//find start and end intersection with root cube
 	HitInfo frontHit, backHit;
-	if (!Util::withinBounds(ray.origin, root->maxBounds, root->minBounds)) {
+	if (!Vec3::WithinBounds(ray.origin, root->maxBounds, root->minBounds)) {
 		CalculateVoxelIntersection(root->minBounds, root->maxBounds, root->d, ray, &frontHit);
 	}
 	else {
@@ -234,7 +233,7 @@ void Octree::Init(Node* root)
 
 			int inBoundsCount = 0;
 			for (int v = 0; v < 3; v++) {
-				//if (Util::withinBounds(it->second->verts[v].position, child->maxBounds, child->minBounds)) {
+				//if (withinBounds(it->second->verts[v].position, child->maxBounds, child->minBounds)) {
 					inBoundsCount++;
 				//}
 			}
@@ -248,7 +247,7 @@ void Octree::Init(Node* root)
 		root->children[i] = child;
 		child->parent = root;
 
-		//if (Util::doubleCompare(0.625, root->maxBounds[0] - root->minBounds[0])) printf("leaf node %i\n", child->tris.size());
+		//if (doubleCompare(0.625, root->maxBounds[0] - root->minBounds[0])) printf("leaf node %i\n", child->tris.size());
 		//else printf("node%i %i\n", i, child->tris.size());
 		//if (child->tris.size() > 0) {
 		//	printf("node%i %i\n", i, child->tris.size());
