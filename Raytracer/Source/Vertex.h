@@ -23,4 +23,5 @@ struct TriVerts
 	//Vertex verts[3];
 	Vec3 norm[3];
 	Vec2 uv[3];
+	Vec2 pad0;
 };

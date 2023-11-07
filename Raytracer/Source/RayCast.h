@@ -6,7 +6,6 @@ struct HitInfo {
 	float u, v; //barycentric coords
 	short triId = -1;
 	short meshInstId = -1;
-	//class Tri* hit = nullptr;
 };
 
 struct Ray {

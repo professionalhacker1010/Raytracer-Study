@@ -25,12 +25,6 @@ public:
 	Vec3 verts[3];
 	Vec3 centroid;
 	//Vec3 normal;
-	Vec3 edge1, edge2;
-	//float d;
-
-	//unsigned int dimOne = 0, dimTwo = 1;
-	
-	//float proj1[2], proj2[2], proj3[2];
 
 	void CachedCalculations();
 };

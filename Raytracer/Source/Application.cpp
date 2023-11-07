@@ -32,12 +32,13 @@ Vec3 colors[] = {
 	Vec3(1, 0, 1), //pink
 };
 
-bool Application::Init()
+bool Application::Init(GLFWwindow* window)
 {
+	//set up tlas, blas, meshes, and mesh instances
 	for (int i = 0; i < NUM_MESHES; i++) {
 		//int dummy = 0;
 		meshes[i] = new Mesh("Assets/teapot.obj", "Assets/bricks.png", i);
-		bvh[i] = new BVH(meshes[i]->tris, meshes[i]->numTris);
+		bvh[i] = new BVH(i, meshes[i]->numTris);
 		bvh[i]->Rebuild();
 	}
 
@@ -45,27 +46,15 @@ bool Application::Init()
 	bvhInstances = (BVHInstance*)MALLOC64(sizeof(BVHInstance) * NUM_MESH_INST); //new BVHInstance[numMeshInstances];//
 
 	for (int i = 0; i < NUM_MESH_INST; i++) {
-		meshInstances[i].Set(meshes[0], i); //= (MeshInstance*)_aligned_malloc(sizeof(MeshInstance), ALIGN); //new MeshInstance(meshes[0], i);
-		bvhInstances[i].Set(bvh[meshInstances[i].meshRef->id], &meshInstances[i]);
+		meshInstances[i].Set(0, i); //= (MeshInstance*)_aligned_malloc(sizeof(MeshInstance), ALIGN); //new MeshInstance(meshes[0], i);
+		bvhInstances[i].Set(meshInstances[i].meshId, i);
 	}
 
 	tlas = new TLAS(bvhInstances, NUM_MESH_INST);
-	int size = sizeof(MeshInstance);
-	int size2 = sizeof(Mesh);
-	int size3 = sizeof(BVH);
-	int size4 = sizeof(TLAS);
-	int size5 = sizeof(RenderQuad);
-	int size6 = sizeof(BVHInstance);
-	int size7 = sizeof(BVHNode);
-	Util::Print("Sizeof BVH node = " + std::to_string(size7));
-
-	// load HDR sky
-	int bpp = 0;
-	skyPixels = stbi_loadf("Assets/sky_19.hdr", &skyWidth, &skyHeight, &skyBpp, 0);
-	for (int i = 0; i < skyWidth * skyHeight * 3; i++) skyPixels[i] = sqrtf(skyPixels[i]);
 
 	tlas->Rebuild();
 
+	//lights
 	lights[0].position = Vec3(3, 10, 2);
 	lights[0].color = Vec3(255, 255, 255) / 255.0f;
 	lights[1].position = Vec3(3, 10, -2);
@@ -74,9 +63,44 @@ bool Application::Init()
 
 	renderQuad = new RenderQuad();
 	camera = &Camera::Get();
-	//->SetTransform(Vec3(-2.0f, 0.0f, 2.0f), Mat4::Identity());
+
+	// load HDR sky
+	int bpp = 0;
+	skyPixels = stbi_loadf("Assets/sky_19.hdr", &skyWidth, &skyHeight, &skyBpp, 0);
+	for (int i = 0; i < skyWidth * skyHeight * 3; i++) skyPixels[i] = sqrtf(skyPixels[i]);
+
+	// prepare OpenCL and buffers
+	tracer = new Kernel("Source/cl/kernels.cl", "render", window); //load and compile file, load render function
+	renderTargetBuffer = new Buffer(window, WIDTH * HEIGHT * 4); //buffer with 4 bytes per pixel
+
+	skyboxBuffer = new Buffer(window, skyWidth * skyHeight * 3 * sizeof(float), skyPixels); //3 color channels per texel
+	triBuffer = new Buffer(window, meshes[0]->numTris * sizeof(Tri), meshes[0]->tris);
+	vertDataBuffer = new Buffer(window, meshes[0]->numTris * sizeof(TriVerts), meshes[0]->vertData);
+	bvhBuffer = new Buffer(window, bvh[0]->numNodes * sizeof(BVHNode), bvh[0]->nodes);
+	bvhTriIdxBuffer = new Buffer(window, bvh[0]->numTris * sizeof(uint), bvh[0]->triIndices);
+	bvhInstBuffer = new Buffer(window, NUM_MESH_INST * sizeof(BVHInstance), bvhInstances);
+	meshInstBuffer = new Buffer(window, NUM_MESH_INST * sizeof(MeshInstance), meshInstances);
+	tlasBuffer = new Buffer(window, sizeof(TLASNode) * tlas->numNodes, tlas->nodes);
+
+	//send to gpu once
+	skyboxBuffer->CopyToDevice(); 
+	triBuffer->CopyToDevice(); //no mesh animation, so mesh and bvh are static
+	vertDataBuffer->CopyToDevice();
+	bvhBuffer->CopyToDevice();
+	bvhTriIdxBuffer->CopyToDevice();
 
 	startFrameTime = clock();
+
+	Util::Print(std::to_string(sizeof(TriVerts)));
+
+	struct Test {
+		//Mat4 mat;
+		//AABB aabb;
+		float f0;
+		__m128 m;
+		float f1;
+	};
+	Util::Print(std::to_string(sizeof(Test)));
 
 	return true;
 }
@@ -85,9 +109,31 @@ void Application::Tick(float deltaTime)
 {
 	clock_t startAnimTime = clock();
 	AnimateScene(deltaTime);
-	DrawScene();
-	renderQuad->Draw(pixelData);
+	//send to gpu every frame
+	bvhInstBuffer->CopyToDevice();
+	meshInstBuffer->CopyToDevice();
+	tlasBuffer->CopyToDevice();
+	tracer->SetArguments(
+		renderTargetBuffer,
+		skyboxBuffer, 
+		tlasBuffer,
+		triBuffer, vertDataBuffer, bvhBuffer, bvhTriIdxBuffer,
+		meshInstBuffer, bvhInstBuffer,
+		camera->GetPosition(), camera->bottomLeft, camera->lengthX, camera->lengthY, 
+		(int)skyWidth, (int)skyHeight);
+	tracer->Run(WIDTH * HEIGHT); //use one thread per pixel
+	renderTargetBuffer->CopyFromDevice(); // copy buffer from VRAM to RAM
+	memcpy(pixels, renderTargetBuffer->GetHostPtr(), renderTargetBuffer->size);
+	renderQuad->Draw(pixels);
 	totalDrawTime += clock() - startAnimTime;
+	frames++;
+	return;
+
+	//clock_t startAnimTime = clock();
+	//AnimateScene(deltaTime);
+	//DrawScene();
+	//renderQuad->Draw(pixelData);
+	//totalDrawTime += clock() - startAnimTime;
 }
 
 
@@ -96,8 +142,9 @@ bool Application::RayCast(Ray& ray, Vertex& outVertex, HitInfo& hit, int ignoreI
 	tlas->CalculateIntersection(ray, hit);
 
 	if (hit.triId != -1) {
-		TriVerts& vertData = meshInstances[hit.meshInstId].meshRef->vertData[hit.triId];
-		Surface& tex = *(meshInstances[hit.meshInstId].meshRef->texture);
+		Mesh& mesh = *meshes[meshInstances[hit.meshInstId].meshId];
+		TriVerts& vertData = mesh.vertData[hit.triId];
+		Surface& tex = *(mesh.texture);
 
 		Vec3 coord = Vec3(hit.u, hit.v, 1 - (hit.u + hit.v));
 
@@ -193,7 +240,7 @@ Vec3 Application::CastMirrorRays(Ray& ray, Vertex& vertex, int rayDepth) {
 		unsigned int u = skyWidth * atan2f(secondary.direction[2], secondary.direction[0]) * INV2PI - 0.5f;
 		unsigned int v = skyHeight * acosf(secondary.direction[1]) * INVPI - 0.5f;
 		unsigned int skyIdx = u + v * skyWidth;
-		if (skyIdx < skyWidth * skyHeight)
+		if (skyIdx < (uint)skyWidth * (uint)skyHeight)
 			return Vec3::Min(Vec3::One(), 0.65f * Vec3(skyPixels[skyIdx * 3], skyPixels[skyIdx * 3 + 1], skyPixels[skyIdx * 3 + 2]));
 	}
 
@@ -211,11 +258,21 @@ void Application::AnimateScene(float deltaTime) {
 	}
 
 	//update camera transform
-	static float angle = 0; angle += 0.5f * deltaTime;
-	Mat4 M1 = Mat4::CreateRotationY(angle);// M2 = Mat4::CreateRotationX(-0.65f) * M1;
-	Vec3 camPos = Mat4::Transform(Vec3(0.0f, 1.0f, 6.5f), M1);
-	camera->SetTransform(camPos, M1);
+	static bool once = false;
+	if (!once) {
+		static float angle = 0; angle += 0.5f * deltaTime;
+		Mat4 M1 = Mat4::CreateRotationY(angle); //Mat4 M2 = Mat4::CreateRotationX(0.65f) * M1;
+		Vec3 camPos = Mat4::Transform(Vec3(0.0f, 1.0f, 6.5f), M1);
+		camera->SetTransform(camPos, M1);
 
+		for (int i = 0; i < NUM_MESH_INST; i++) {
+			meshInstances[i].SetTransform(Mat4::CreateTranslation(Vec3(bvhInstances[i].meshInstId, 0.0f, 0.0f)));
+			bvhInstances[i].SetTransform(Mat4::CreateTranslation(Vec3(bvhInstances[i].meshInstId, 0.0f, 0.0f)));
+		}
+		//once = true;
+	}
+
+	
 	//mesh instance transformations
 	static float a[16] = { 0 }, h[16] = { 5, 4, 3, 2, 1, 5, 4, 3 }, s[16] = { 0 };
 	for (int i = 0, x = 0; x < 3; x++) for (int y = 0; y < 3; y++, i++)
@@ -275,7 +332,7 @@ void Application::DrawScene()
 						unsigned int u = skyWidth * atan2f(ray.direction[2], ray.direction[0]) * INV2PI - 0.5f;
 						unsigned int v = skyHeight * acosf(ray.direction[1]) * INVPI - 0.5f;
 						unsigned int skyIdx = u + v * skyWidth;
-						if (skyIdx < skyWidth * skyHeight)
+						if (skyIdx < (uint)skyWidth * (uint)skyHeight)
 							color = Vec3::Min(Vec3::One(), 0.65f * Vec3(skyPixels[skyIdx * 3], skyPixels[skyIdx * 3 + 1], skyPixels[skyIdx * 3 + 2])) * 255.0f;
 					}
 				}
@@ -285,6 +342,7 @@ void Application::DrawScene()
 				for (i = 0; i < 3; i++) {
 					pixelData[v][u][i] = (GLubyte)color[i];
 				}
+				pixelData[v][u][3] = (GLubyte)255.0f;
 			}
 		}
 	}
@@ -296,8 +354,11 @@ void Application::DrawScene()
 }
 
 void Application::KeyDown(int key) {
-	if (key == 'Q' || key == 'q') exit(0);
-	if (key == 'p') system("pause");
+	if (key == 'Q' || key == 'q') {
+		exit(0);
+		system("pause");
+	}
+	if (key == 'p' || key == 'P') system("pause");
 }
 
 void Application::Shutdown() {
@@ -307,15 +368,21 @@ void Application::Shutdown() {
 	Util::Print("Avg ms per raycast = " + std::to_string(raycastTime / ((float)(WIDTH * HEIGHT))));
 	Util::Print("Avg draw secs = " + std::to_string(drawTime / ((float)frames * 1000.0f)));
 
-	FREE64(bvhInstances);
-	FREE64(meshInstances);
+	delete tlas;
 
 	for (int i = 0; i < NUM_MESHES; i++) {
 		delete meshes[i];
 		delete bvh[i];
 	}
 
-	delete tlas;
+	FREE64(bvhInstances);
+	FREE64(meshInstances);
+
 	delete renderQuad;
+
+	delete skyPixels;
+	delete skyboxBuffer;
+	delete renderTargetBuffer;
+	delete tracer;
 	system("pause");
 }

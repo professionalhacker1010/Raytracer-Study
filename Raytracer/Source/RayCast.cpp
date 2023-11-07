@@ -35,10 +35,6 @@ bool Ray::IntersectAABB(const Ray& ray, Vec3 minBounds, Vec3 maxBounds, float& o
 
 bool Ray::IntersectAABB_SIMD(const Ray& ray, const __m128 bmin4, const __m128 bmax4, float& out)
 {
-	//mask out the uint bc calculations on it are slow
-	//static __m128 mask4 = _mm_cmpeq_ps(_mm_setzero_ps(), _mm_set_ps(1, 0, 0, 0)); 
-	//__m128 t1 = _mm_mul_ps(_mm_sub_ps(_mm_and_ps(bmin4, mask4), ray.origin4), ray.dInv4);
-	//__m128 t2 = _mm_mul_ps(_mm_sub_ps(_mm_and_ps(bmax4, mask4), ray.origin4), ray.dInv4);
 	__m128 t1 = _mm_mul_ps(_mm_sub_ps(bmin4, ray.origin4), ray.dInv4);
 	__m128 t2 = _mm_mul_ps(_mm_sub_ps(bmax4, ray.origin4), ray.dInv4);
 	__m128 vmax4 = _mm_max_ps(t1, t2), vmin4 = _mm_min_ps(t1, t2);
@@ -50,8 +46,6 @@ bool Ray::IntersectAABB_SIMD(const Ray& ray, const __m128 bmin4, const __m128 bm
 		_mm_max_ps(vmin4, _mm_shuffle_ps(vmin4, vmin4, _MM_SHUFFLER(1, 1, 1, 1))),
 		_mm_max_ps(vmin4, _mm_shuffle_ps(vmin4, vmin4, _MM_SHUFFLER(2, 2, 2, 2)))
 	).m128_f32[0];
-	//float tmax = fminf(vmax4.m128_f32[0], fminf(vmax4.m128_f32[1], vmax4.m128_f32[2]));
-	//float tmin = fmaxf(vmin4.m128_f32[0], fmaxf(vmin4.m128_f32[1], vmin4.m128_f32[2]));
 	if (tmax >= tmin && tmin < ray.maxDist && tmax > 0.0f) {
 		out = tmin;
 		return true;

@@ -8,10 +8,13 @@ class BVH;
 class Mesh;
 class TLAS;
 class RenderQuad;
+class Kernel;
+class Buffer;
 struct Vec3;
 struct Ray;
 struct HitInfo;
 struct Vertex;
+struct GLFWwindow;
 
 constexpr int NUM_MESHES = 1;
 constexpr int NUM_MESH_INST = 9;
@@ -19,10 +22,19 @@ constexpr int NUM_LIGHTS = 1;
 constexpr int MAX_RAY_DEPTH = 4;
 
 class Application {
-public:
-	Application() = default;
 
-	bool Init();
+private:
+	Application() = default;
+public:
+	Application(Application const&) = delete;
+	void operator=(Application const&) = delete;
+
+	static Application& Get() {
+		static Application instance;
+		return instance;
+	}
+
+	bool Init(GLFWwindow* window);
 	void Tick(float deltaTime);
 	void Shutdown();
 
@@ -67,9 +79,11 @@ private:
 	Camera* camera;
 	TLAS* tlas;
 	
+public:
 	BVH* bvh[NUM_MESHES];
 	Mesh* meshes[NUM_MESHES];
 	
+private:
 	BVHInstance* bvhInstances;
 	MeshInstance* meshInstances;
 
@@ -81,8 +95,23 @@ private:
 
 	//rendering
 	RenderQuad* renderQuad;
-	GLubyte pixelData[HEIGHT][WIDTH][3];
+	GLubyte pixelData[HEIGHT][WIDTH][4];
+	unsigned int pixels[HEIGHT * WIDTH * 4];
 
 	//mouse
 	Vec2 mousePos;
+
+	//opencl kernel
+	Kernel* tracer;
+
+	//gpu buffers
+	Buffer* renderTargetBuffer;
+	Buffer* skyboxBuffer;
+	Buffer* triBuffer;
+	Buffer* vertDataBuffer;
+	Buffer* bvhBuffer;
+	Buffer* bvhTriIdxBuffer;
+	Buffer* bvhInstBuffer;
+	Buffer* meshInstBuffer;
+	Buffer* tlasBuffer;
 };

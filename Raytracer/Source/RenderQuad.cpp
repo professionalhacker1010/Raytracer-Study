@@ -39,7 +39,7 @@ RenderQuad::RenderQuad()
 	//set up texture
 	texture = new GLuint[1];
 	glGenTextures(1, texture);
-	glBindTexture(GL_RGB, *texture);
+	glBindTexture(GL_RGBA, *texture);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -58,8 +58,8 @@ void RenderQuad::Draw(const void* data)
 {
 	// Draw the fullscreen quad
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_RGB, *texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+	glBindTexture(GL_RGBA, *texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 	glUniform1i(glGetUniformLocation(shaderProgram, "renderTexture"), 0); // 0 is the texture unit
 
 	glUseProgram(shaderProgram);

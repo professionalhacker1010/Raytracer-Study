@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include "Shader.h"
+#include "Error.h"
 
 // Shader class implementation
 Shader::Shader(const char* vfile, const char* pfile, bool fromString)
@@ -109,23 +110,3 @@ void Shader::SetUInt(const char* name, const uint v)
 	CheckGL();
 }
 
-void CheckProgram(GLuint id, const char* vshader, const char* fshader)
-{
-	char buffer[1024];
-	memset(buffer, 0, sizeof(buffer));
-	GLsizei length = 0;
-	glGetProgramInfoLog(id, sizeof(buffer), &length, buffer);
-	CheckGL();
-	FATALERROR_IF(length > 0, "Shader link error:\n%s", buffer);
-}
-
-
-void CheckShader(GLuint shader, const char* vshader, const char* fshader)
-{
-	char buffer[1024];
-	memset(buffer, 0, sizeof(buffer));
-	GLsizei length = 0;
-	glGetShaderInfoLog(shader, sizeof(buffer), &length, buffer);
-	CheckGL();
-	FATALERROR_IF(length > 0 && strstr(buffer, "ERROR"), "Shader compile error:\n%s", buffer);
-}

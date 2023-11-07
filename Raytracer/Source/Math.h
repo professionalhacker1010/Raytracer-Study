@@ -532,11 +532,11 @@ public:
 
     inline static Vec3 Transform(const Vec3& vec, const Mat4& mat, float w = 1.0f)
     {
-        __m128 v = _mm_set_ps(vec[0], vec[1], vec[2], w);
+        __m128 v = _mm_set_ps(w, vec[2], vec[1], vec[0]);//_mm_set_ps(vec[0], vec[1], vec[2], w);
         return Vec3(
-            _mm_dp_ps(v, _mm_set_ps(mat.mat[0][0], mat.mat[1][0], mat.mat[2][0], mat.mat[3][0]), 0xF1).m128_f32[0],
-            _mm_dp_ps(v, _mm_set_ps(mat.mat[0][1], mat.mat[1][1], mat.mat[2][1], mat.mat[3][1]), 0xF1).m128_f32[0],
-            _mm_dp_ps(v, _mm_set_ps(mat.mat[0][2], mat.mat[1][2], mat.mat[2][2], mat.mat[3][2]), 0xF1).m128_f32[0]
+            _mm_dp_ps(v, _mm_set_ps(mat.mat[3][0], mat.mat[2][0], mat.mat[1][0], mat.mat[0][0]), 0xF1).m128_f32[0],
+            _mm_dp_ps(v, _mm_set_ps(mat.mat[3][1], mat.mat[2][1], mat.mat[1][1], mat.mat[0][1]), 0xF1).m128_f32[0],
+            _mm_dp_ps(v, _mm_set_ps(mat.mat[3][2], mat.mat[2][2], mat.mat[1][2], mat.mat[0][2]), 0xF1).m128_f32[0]
         );
     }
 

@@ -102,7 +102,7 @@ bool Octree::CalculateIntersection(const Ray& ray, HitInfo* out, int ignoreID)
 	CalculateVoxelIntersection(root->minBounds, root->maxBounds, root->d, testRay, &backHit);
 
 	//step through octree
-	while (closestTri == nullptr && !Util::doubleCompare(frontHit.distance, backHit.distance) && frontHit.distance < ray.maxDist) {
+	while (closestTri == nullptr && !Util::FloatCompare(frontHit.distance, backHit.distance) && frontHit.distance < ray.maxDist) {
 
 		//find closest intersection in tree
 		//frontHit.position = epsilon + frontHit.position;

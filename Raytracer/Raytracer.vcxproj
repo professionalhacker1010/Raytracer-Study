@@ -174,12 +174,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
+    <None Include="Source\cl\kernels.cl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Application.cpp" />
     <ClCompile Include="Source\BVH.cpp" />
     <ClCompile Include="Source\Camera.cpp" />
     <ClCompile Include="Source\CLBuffer.cpp" />
+    <ClCompile Include="Source\Error.cpp" />
     <ClCompile Include="Source\External\template.cpp" />
     <ClCompile Include="Source\GLTexture.cpp" />
     <ClCompile Include="Source\main.cpp" />
@@ -203,6 +205,7 @@
     <ClInclude Include="Source\Camera.h" />
     <ClInclude Include="Source\CLBuffer.h" />
     <ClInclude Include="Source\Constants.h" />
+    <ClInclude Include="Source\Error.h" />
     <ClInclude Include="Source\External\d3dx12.h" />
     <ClInclude Include="Source\External\glad.h" />
     <ClInclude Include="Source\External\khrplatform.h" />
@@ -234,6 +237,7 @@
     <ClInclude Include="Source\Tri.h" />
     <ClInclude Include="Source\Util.h" />
     <ClInclude Include="Source\Vertex.h" />
+    <ClInclude Include="UtilCL.cl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

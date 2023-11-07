@@ -22,6 +22,13 @@ private:
 	Mat4 rot;
 	Vec3 pos;
 	Vec3 invPos;
+
+public:
+	Vec3 bottomLeft;
+	Vec3 lengthY;
+	Vec3 lengthX;
+
+private:
 	Camera();
 public:
 	Camera(Camera const&) = delete;

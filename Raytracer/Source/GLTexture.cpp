@@ -1,10 +1,8 @@
 // Template, IGAD version 2
 // IGAD/NHTV/UU - Jacco Bikker - 2006-2021
 #include "stdafx.h"
-//#include <gl/glew.h>
 #include "GLTexture.h"
-
-#include "Util.h"
+#include "Error.h"
 
 // OpenGL texture wrapper class
 GLTexture::GLTexture(unsigned int w, unsigned int h, unsigned int type)

@@ -4,7 +4,7 @@
 #include "MeshInstance.h"
 #include "Mesh.h"
 #include "Camera.h"
-
+#include "Application.h"
 
 bool debugPrint = true;
 bool debugColor = false;
@@ -34,14 +34,14 @@ void BVH::DebugTraversal(unsigned int idx) {
 	DebugTraversal(node.leftFirst + 1);
 }
 
-BVH::BVH(Tri* triangles, unsigned int numTris)
+BVH::BVH(int meshId, unsigned int numTris)
 {
-	Set(triangles, numTris);
+	Set(meshId, numTris);
 }
 
-void BVH::Set(Tri* triangles, unsigned int numTris)
+void BVH::Set(int meshId, unsigned int numTris)
 {
-	tris = triangles;
+	this->meshId = meshId;
 	nodes = (BVHNode*)MALLOC64(sizeof(BVHNode) * numTris * 2); //new BVHNode[numTris * 2];//
 	triIndices = (unsigned int*)MALLOC64(sizeof(unsigned int) * numTris); //new unsigned int[numTris]; //
 	this->numTris = numTris;
@@ -89,6 +89,8 @@ bool BVH::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
 	BVHNode* node = &nodes[nodeIdx], * left, * right, * stack[MAX_BVH_STACK] = { nullptr };
 	unsigned int stackIdx = 0;
 	bool hasHit = false;
+
+	Tri* tris = Application::Get().meshes[meshId]->tris;
 
 	while (true)
 	{
@@ -147,6 +149,8 @@ void BVH::UpdateNodeBounds(unsigned int index)
 	node.min = Vec3(FLT_MAX);
 	node.max = Vec3(-FLT_MAX);
 
+	Tri* tris = Application::Get().meshes[meshId]->tris;
+
 	for (unsigned int i = leftFirst; i < maxIdx; i++) {
 		Tri& tri = tris[triIndices[i]];
 		for (unsigned int j = 0; j < 3; j++) {
@@ -165,11 +169,13 @@ void BVH::Subdivide(unsigned int parentIdx)
 
 	if (parentIdx == 0) numNodes++; //to fit left and right nodes on 64 byte cache line
 
+	Tri* tris = Application::Get().meshes[meshId]->tris;
+
 	//calculate split resulting in smallest AABB surface areas
 	float bestCost = FLT_MAX;
 	float bestSplitPos = 0;
 	int bestAxis = -1;
-	CalculateBestSplit(parent, bestCost, bestSplitPos, bestAxis);
+	CalculateBestSplit(tris, parent, bestCost, bestSplitPos, bestAxis);
 
 	//if the split doesn't subdivide into smaller/better boxes than the parent, stop subdividing
 	float parentCost = parent.numTris * AABB(parent.min, parent.max).Area();
@@ -177,7 +183,7 @@ void BVH::Subdivide(unsigned int parentIdx)
 		return;
 	}
 
-	int splitIdx = SortAlongAxis(parent, bestAxis, bestSplitPos);
+	int splitIdx = SortAlongAxis(tris, parent, bestAxis, bestSplitPos);
 
 	//create child nodes
 	int numLeftTris = splitIdx - parent.leftFirst;
@@ -205,7 +211,7 @@ void BVH::Subdivide(unsigned int parentIdx)
 	Subdivide(rightChildIdx);
 }
 
-void BVH::CalculateBestSplit(const BVHNode& parent, float& bestCost, float& bestSplitPos, int& bestAxis)
+void BVH::CalculateBestSplit(Tri* tris, const BVHNode& parent, float& bestCost, float& bestSplitPos, int& bestAxis)
 {
 	unsigned int maxTriIdx = parent.leftFirst + parent.numTris;
 	const int SPLIT_PLANES = 4;
@@ -215,6 +221,7 @@ void BVH::CalculateBestSplit(const BVHNode& parent, float& bestCost, float& best
 	int axis = 0;
 	if (extents[1] > extents[0]) axis = 1;
 	if (extents[3] > extents[axis]) axis = 2;
+
 	for (int axis = 0; axis < 3; axis++) {
 
 		//fit the min and max bounds on the selected axis
@@ -278,11 +285,12 @@ void BVH::CalculateBestSplit(const BVHNode& parent, float& bestCost, float& best
 	}
 }
 
-int BVH::SortAlongAxis(const BVHNode& node, int axis, double splitPos)
+int BVH::SortAlongAxis(Tri* tris, const BVHNode& node, int axis, double splitPos)
 {
 	//split the tris into two groups, and sort along the way. Works like QuickSort
 	int splitIdx = node.leftFirst;
 	int maxIdx = node.leftFirst + node.numTris;
+
 	while (splitIdx < maxIdx) {
 		Vec3 centroid = tris[triIndices[splitIdx]].centroid;
 		if (centroid[axis] < splitPos) {
@@ -307,14 +315,14 @@ BVH::~BVH()
 	FREE64(triIndices);
 }
 
-BVHInstance::BVHInstance(BVH* bvHeirarchy, MeshInstance* meshInstance) {
+BVHInstance::BVHInstance(int bvHeirarchy, int meshInstance) {
 	Set(bvHeirarchy, meshInstance);
 }
 
-void BVHInstance::Set(BVH* bvHeirarchy, MeshInstance* meshInstance)
+void BVHInstance::Set(int bvHeirarchy, int meshInstance)
 {
-	bvh = bvHeirarchy;
-	mesh = meshInstance;
+	bvhId = bvHeirarchy;
+	meshInstId = meshInstance;
 }
 
 bool BVHInstance::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nodeIdx)
@@ -322,7 +330,9 @@ bool BVHInstance::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nod
 	//transform the ray to do intersection on the un-transformed bvh
 	Ray backupRay = ray;
 	ray.Set(Mat4::Transform(ray.origin, invTransform, 1.0f), Mat4::Transform(ray.direction, invTransform, 0.0f));
-	bool hit = bvh->CalculateIntersection(ray, out, nodeIdx);
+
+	Application& App = Application::Get();
+	bool hit = App.bvh[bvhId]->CalculateIntersection(ray, out, nodeIdx);
 
 	// restore ray origin and direction
 	backupRay.maxDist = ray.maxDist;
@@ -330,7 +340,7 @@ bool BVHInstance::CalculateIntersection(Ray& ray, HitInfo& out, unsigned int nod
 	ray.direction = backupRay.direction;
 	ray.origin = backupRay.origin;
 
-	if (hit) out.meshInstId = (short)mesh->id;
+	if (hit) out.meshInstId = (short)meshInstId;
 
 	return hit;
 }
@@ -340,6 +350,10 @@ void BVHInstance::SetTransform(Mat4 transform)
 	worldSpaceBounds = AABB(Vec3(FLT_MAX), Vec3(-FLT_MAX));
 	invTransform = transform;
 	invTransform.Invert();
+
+	Application& App = Application::Get();
+	BVH* bvh = App.bvh[bvhId];
+
 	//calculate the transformed bounding box for the bvh instance
 	for (int i = 0; i < 8; i++) {
 		worldSpaceBounds.Grow(Mat4::Transform(

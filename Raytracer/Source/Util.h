@@ -4,7 +4,7 @@
 #include <smmintrin.h>
 
 struct Util {
-	static double calcTriArea2D(const float p1[2], const float p2[2], const float p3[2]) {
+	static double CalcTriArea2D(const float p1[2], const float p2[2], const float p3[2]) {
 		__m128 A = _mm_set_ps1(p1[0]);
 		__m128 B = _mm_set_ps(p1[1], -p3[1], p2[1], -p1[1]);
 		__m128 C = _mm_mul_ps(A, B);
@@ -16,10 +16,6 @@ struct Util {
 		//return abs(0.5 * ((p2[0] - p1[0]) * (p3[1] - p1[1]) - (p3[0] - p1[0]) * (p2[1] - p1[1])));
 	}
 
-	static bool doubleCompare(const double in, const double expected, double epsilon = 0.00001) {
-		return abs(expected - in) < epsilon;
-	}
-
 	static bool FloatCompare(const float in, const float expected, float epsilon = 0.00001f) {
 		return abs(expected - in) < epsilon;
 	}
@@ -29,7 +25,6 @@ struct Util {
 		printf(p.c_str());
 	}
 };
-
 
 // aligned memory allocations
 #ifdef _MSC_VER
@@ -48,9 +43,6 @@ struct Util {
 #else
 #define CHECK_RESULT
 #endif
-
-
-
 
 //GLuint CreateVBO(const GLfloat* data, const uint size);
 //void BindVBO(const uint idx, const uint N, const GLuint id);
@@ -75,6 +67,7 @@ inline uint AddBlend(const uint c1, const uint c2)
 }
 
 // Perlin noise
-float noise2D(const float x, const float y);
+float Noise2D(const float x, const float y);
 
 std::string TextFileRead(const char* _File);
+

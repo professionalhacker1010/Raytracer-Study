@@ -202,65 +202,6 @@ using namespace std;
 //	uchar& operator [] (const int n) { return cell[n]; }
 //};
 
-// timer
-//struct Timer
-//{
-//	Timer() { reset(); }
-//	float elapsed() const
-//	{
-//		chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
-//		chrono::duration<double> time_span = chrono::duration_cast<chrono::duration<double>>(t2 - start);
-//		return (float)time_span.count();
-//	}
-//	void reset() { start = chrono::high_resolution_clock::now(); }
-//	chrono::high_resolution_clock::time_point start;
-//};
-
-// generic error checking for OpenGL code
-#define CheckGL() { _CheckGL( __FILE__, __LINE__ ); }
-
-//inline void _CheckGL(const char* f, int l);
-
-// fatal error reporting (with a pretty window)
-#define FATALERROR( fmt, ... ) FatalError( "Error on line %d of %s: " fmt "\n", __LINE__, __FILE__, ##__VA_ARGS__ )
-#define FATALERROR_IF( condition, fmt, ... ) do { if ( ( condition ) ) FATALERROR( fmt, ##__VA_ARGS__ ); } while ( 0 )
-#define FATALERROR_IN( prefix, errstr, fmt, ... ) FatalError( prefix " returned error '%s' at %s:%d" fmt "\n", errstr, __FILE__, __LINE__, ##__VA_ARGS__ );
-#define FATALERROR_IN_CALL( stmt, error_parser, fmt, ... ) do { auto ret = ( stmt ); if ( ret ) FATALERROR_IN( #stmt, error_parser( ret ), fmt, ##__VA_ARGS__ ) } while ( 0 )
-
-
-//inline void FatalError(const char* fmt, ...);
-
-inline void FatalError(const char* fmt, ...)
-{
-	char t[16384];
-	va_list args;
-	va_start(args, fmt);
-	vsnprintf(t, sizeof(t), fmt, args);
-	va_end(args);
-#ifdef _MSC_VER
-	MessageBox(NULL, t, "Fatal error", MB_OK);
-#else
-	fprintf(stderr, t);
-#endif
-	while (1) exit(0);
-}
-
-// OpenGL helper functions
-inline void _CheckGL(const char* f, int l)
-{
-	GLenum error = glGetError();
-	if (error != GL_NO_ERROR)
-	{
-		const char* errStr = "UNKNOWN ERROR";
-		if (error == 0x500) errStr = "INVALID ENUM";
-		else if (error == 0x502) errStr = "INVALID OPERATION";
-		else if (error == 0x501) errStr = "INVALID VALUE";
-		else if (error == 0x506) errStr = "INVALID FRAMEBUFFER OPERATION";
-		FatalError("GL error %d: %s at %s:%d\n", error, errStr, f, l);
-	}
-}
-
-
 // Nils's jobmanager
 class Job
 {
@@ -304,19 +245,8 @@ protected:
 	JobThread* m_JobThreadList;
 };
 
-
-
-
-
-
 // global project settigs; shared with OpenCL
 #include "Constants.h"
-
-// Add your headers here; they will be able to use all previously defined classes and namespaces.
-// In your own .cpp files just add #include "precomp.h".
-// #include "my_include.h"
-
-
 
 // InstructionSet.cpp
 // Compile by using: cl /EHsc /W4 InstructionSet.cpp
@@ -427,21 +357,5 @@ public:
 		}
 	}
 };
-
-// application base class
-//class TheApp
-//{
-//public:
-//	virtual void Init() = 0;
-//	virtual void Tick(float deltaTime) = 0;
-//	virtual void Shutdown() = 0;
-//	virtual void MouseUp(int button) = 0;
-//	virtual void MouseDown(int button) = 0;
-//	virtual void MouseMove(int x, int y) = 0;
-//	virtual void MouseWheel(float y) = 0;
-//	virtual void KeyUp(int key) = 0;
-//	virtual void KeyDown(int key) = 0;
-//	Surface* screen = 0;
-//};
 
 // EOF

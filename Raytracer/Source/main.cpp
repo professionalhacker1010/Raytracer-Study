@@ -13,6 +13,7 @@
 #include "Mesh.h"
 #include "MeshInstance.h"
 #include "Application.h"
+#include "Error.h"
 
 #pragma comment( linker, "/subsystem:windows /ENTRY:mainCRTStartup" )
 
@@ -92,6 +93,13 @@ void WindowCloseCallback(GLFWwindow* window) {
 
 bool Init()
 {
+	//create console window
+	FILE* fp;
+	AllocConsole();
+	freopen_s(&fp, "CONIN$", "r", stdin);
+	freopen_s(&fp, "CONOUT$", "w", stdout);
+	freopen_s(&fp, "CONOUT$", "w", stderr);
+
 	// open a window
 	if (!glfwInit()) FatalError("glfwInit failed.");
 	glfwSetErrorCallback(ErrorCallback);
@@ -129,18 +137,8 @@ bool Init()
 	glDisable(GL_BLEND);
 	CheckGL();
 
-	//create console window
-	FILE* fp;
-	AllocConsole();
-	freopen_s(&fp, "CONIN$", "r", stdin);
-	freopen_s(&fp, "CONOUT$", "w", stdout);
-	freopen_s(&fp, "CONOUT$", "w", stderr);
-
-	//glClearColor(0, 0, 1, 1);
-	//glClear(GL_COLOR_BUFFER_BIT);
-
-	app = new Application();
-	app->Init();
+	app = &Application::Get();
+	app->Init(window);
 	
 	return true;
 }

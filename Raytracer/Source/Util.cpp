@@ -1,6 +1,8 @@
 //#include "stdafx.h"
 #include "Util.h"
-
+#include <stdlib.h>
+#include <fstream>
+#include <string>
 
 //GLuint CreateVBO(const GLfloat* data, const uint size)
 //{
@@ -62,7 +64,7 @@ static float InterpolatedNoise(const int i, const float x, const float y)
 	const float i2 = Interpolate(v3, v4, fractional_X);
 	return Interpolate(i1, i2, fractional_Y);
 }
-float noise2D(const float x, const float y)
+float Noise2D(const float x, const float y)
 {
 	float total = 0, frequency = (float)(2 << numOctaves), amplitude = 1;
 	for (int i = 0; i < numOctaves; ++i)
@@ -73,12 +75,10 @@ float noise2D(const float x, const float y)
 	return total / frequency;
 }
 
-//todo
 std::string TextFileRead(const char* _File)
-{
-	//ifstream s(_File);
-	//std::string str((istreambuf_iterator<char>(s)), istreambuf_iterator<char>());
-	//s.close();
-	//return str;
-	return "";
+{	
+	std::ifstream s(_File);
+	std::string str((std::istreambuf_iterator<char>(s)), std::istreambuf_iterator<char>());
+	s.close();
+	return str;
 }

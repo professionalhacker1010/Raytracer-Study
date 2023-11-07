@@ -8,8 +8,8 @@ bool Tri::CalculateIntersection(const Ray& ray, HitInfo& out) const
 {
 	intersectionChecks++;
 
-	//const Vec3 edge1 = verts[1].position - verts[0].position;
-	//const Vec3 edge2 = verts[2].position - verts[0].position;
+	const Vec3 edge1 = verts[1] - verts[0];
+	const Vec3 edge2 = verts[2] - verts[0];
 	const Vec3 h = Vec3::Cross(ray.direction, edge2);
 	const float a = Vec3::Dot(edge1, h);
 	if (abs(a) < 0.0001f) return false; // ray parallel to triangle
@@ -21,7 +21,7 @@ bool Tri::CalculateIntersection(const Ray& ray, HitInfo& out) const
 	const float v = f * Vec3::Dot(ray.direction, q);
 	if (v < 0 || u + v > 1) return false;
 	const float t = f * Vec3::Dot(edge2, q);
-	if (t > ray.maxDist) return false;
+	if (t > out.distance) return false;
 	if (t > 0.0001f) {
 		out.distance = t;
 		out.u = u;
@@ -72,9 +72,6 @@ int Tri::debug()
 
 void Tri::CachedCalculations()
 {
-	edge1 = verts[1] - verts[0];
-	edge2 = verts[2] - verts[0];
-
 	//plane normal
 	//normal = Vec3::Cross(edge1, edge2);
 	//normal.Normalize();

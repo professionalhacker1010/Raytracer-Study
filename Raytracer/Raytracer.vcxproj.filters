@@ -13,9 +13,18 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\External">
+      <UniqueIdentifier>{34c0e767-f777-4cdb-8719-81b66c4aa365}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\cl">
+      <UniqueIdentifier>{464846b0-8499-44fb-92f2-b495bf711aa2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
+    <None Include="Source\cl\kernels.cl">
+      <Filter>Source Files\cl</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\AABB.h">
@@ -28,15 +37,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Constants.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\External\d3dx12.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\External\khrplatform.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\External\stb_image.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Light.h">
@@ -75,46 +75,10 @@
     <ClInclude Include="Source\Vertex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\External\glad.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Surface.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\stdafx.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\targetver.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\OpenCL\inc\CL\cl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\OpenCL\inc\CL\cl.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\OpenCL\inc\CL\cl_d3d10.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\OpenCL\inc\CL\cl_d3d11.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\OpenCL\inc\CL\cl_dx9_media_sharing.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\OpenCL\inc\CL\cl_ext.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\OpenCL\inc\CL\cl_gl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\OpenCL\inc\CL\cl_gl_ext.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\OpenCL\inc\CL\cl_platform.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\OpenCL\inc\CL\opencl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\GLTexture.h">
@@ -128,6 +92,57 @@
     </ClInclude>
     <ClInclude Include="Source\Application.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\External\glad.h">
+      <Filter>Header Files\External</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\External\d3dx12.h">
+      <Filter>Header Files\External</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\OpenCL\inc\CL\cl.h">
+      <Filter>Header Files\External</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\OpenCL\inc\CL\cl.hpp">
+      <Filter>Header Files\External</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\OpenCL\inc\CL\cl_d3d10.h">
+      <Filter>Header Files\External</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\OpenCL\inc\CL\cl_d3d11.h">
+      <Filter>Header Files\External</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\OpenCL\inc\CL\cl_dx9_media_sharing.h">
+      <Filter>Header Files\External</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\OpenCL\inc\CL\cl_ext.h">
+      <Filter>Header Files\External</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\OpenCL\inc\CL\cl_gl.h">
+      <Filter>Header Files\External</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\OpenCL\inc\CL\cl_gl_ext.h">
+      <Filter>Header Files\External</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\OpenCL\inc\CL\cl_platform.h">
+      <Filter>Header Files\External</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\External\khrplatform.h">
+      <Filter>Header Files\External</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\OpenCL\inc\CL\opencl.h">
+      <Filter>Header Files\External</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\External\stb_image.h">
+      <Filter>Header Files\External</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\targetver.h">
+      <Filter>Header Files\External</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Error.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UtilCL.cl">
+      <Filter>Source Files\cl</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -186,6 +201,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\External\template.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Error.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

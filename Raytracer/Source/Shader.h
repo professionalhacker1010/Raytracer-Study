@@ -30,5 +30,3 @@ private:
 	uint ID = 0;		// shader program identifier
 };
 
-void CheckProgram(uint id, const char* vshader, const char* fshader);
-void CheckShader(uint shader, const char* vshader, const char* fshader);
