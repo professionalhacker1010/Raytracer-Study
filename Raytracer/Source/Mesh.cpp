@@ -7,8 +7,8 @@ Mesh::Mesh(const char* objFile, const char* texFile, int meshId)
     vertData = (TriVerts*)_aligned_malloc(sizeof(TriVerts) * MAX_TRIANGLES, ALIGNSIZE);// new TriVerts[MAX_TRIANGLES];//
 
     texture = new Surface(texFile);
-    Vec2 UV[1024];
-    Vec3 N[1024], P[1024];
+    Vec2 UV[11050];
+    Vec3 N[11050], P[19500];
     int UVs = 0, Ns = 0, Ps = 0, a, b, c, d, e, f, g, h, i, idx = 0;
     bool init = false;
     FILE* file = fopen(objFile, "r");
@@ -39,7 +39,7 @@ Mesh::Mesh(const char* objFile, const char* texFile, int meshId)
             continue;
         }
         else {
-            sscanf(line + 3, "%i/%i/%i %i/%i/%i %i/%i/%i",
+            sscanf(line + 2, "%i/%i/%i %i/%i/%i %i/%i/%i",
                 &a, &b, &c, &d, &e, &f, &g, &h, &i);
         }
 
@@ -48,10 +48,14 @@ Mesh::Mesh(const char* objFile, const char* texFile, int meshId)
         //    bindPoseTris = (Tri*)_aligned_malloc(sizeof(Tri) * numTris, ALIGN);
         //    vertData = (TriVerts*)_aligned_malloc(sizeof(TriVerts) * numTris, ALIGN);
         //}
+        if (a < 0) {
+            Util::Print("invalid at " + std::string(line));
+            continue;
+        }
 
-        bindPoseTris[idx].verts[0] = P[a]; vertData[idx].norm[0] = N[c]; vertData[idx].uv[0] = UV[b];
-        bindPoseTris[idx].verts[1] = P[d]; vertData[idx].norm[1] = N[f]; vertData[idx].uv[1] = UV[e];
-        bindPoseTris[idx].verts[2] = P[g]; vertData[idx].norm[2] = N[i]; vertData[idx].uv[2] = UV[h];
+        bindPoseTris[idx].verts[0] = P[a]; vertData[idx].norm0 = N[c]; vertData[idx].uv0 = UV[b];
+        bindPoseTris[idx].verts[1] = P[d]; vertData[idx].norm1 = N[f]; vertData[idx].uv1 = UV[e];
+        bindPoseTris[idx].verts[2] = P[g]; vertData[idx].norm2 = N[i]; vertData[idx].uv2x = UV[h][0]; vertData[idx].uv2y = UV[h][1];
 
         idx++;
     }

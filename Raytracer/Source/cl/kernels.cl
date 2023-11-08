@@ -1,26 +1,11 @@
 #include "Source/Constants.h"
 #include "UtilCL.cl"
 
-bool RayCast(
-	struct Ray* ray, struct Vertex* outVertex, 
-	__global struct TLASNode* tlas, 
-	__global struct BVHInstance* blas, 
-	__global struct BVHNode* bvh, __global uint* bvhTriIndices, 
-	__global struct Tri* tris) 
-{
-	
-	bool hit = IntersectTLAS(ray, tlas, blas, bvh, bvhTriIndices, tris);
-
-	if (hit) {
-
-		//position
-		outVertex->position = ray->origin + ray->hit.distance * ray->direction;
-
-		return true;
-	}
-
-	return false;
-}
+__constant struct Light lights[2] = {
+	((float3)(3, 10, 2), (float3)(1, 1, 1)),
+	((float3)(3, 10, 2), (float3)(1, 1, 1))
+};
+__constant float3 ambientLight = (float3)(60 / 255.0f, 56 / 255.0f, 79 / 255.0f) ;
 
 __constant float3 colors[] = {
 	(float3)(1, 0, 0), //red
@@ -31,14 +16,136 @@ __constant float3 colors[] = {
 	(float3)(1, 0, 1), //pink
 };
 
+bool RayCast(
+	__global uint* texture, uint texWidth, uint texHeight,
+	struct Ray* ray, struct Vertex* outVertex,
+	__global struct TLASNode* tlas,
+	__global struct BVHInstance* blas,
+	__global struct BVHNode* bvh, __global uint* bvhTriIndices,
+	__global struct Tri* tris, __global struct TriVerts* vertData,
+	__global struct MeshInstance* meshInstances
+	)
+{
+
+	bool hit = IntersectTLAS(ray, tlas, blas, bvh, bvhTriIndices, tris);
+
+	if (hit) {
+		__global struct MeshInstance* mesh = &meshInstances[ray->hit.meshInstId];
+		__global struct TriVerts* triVerts = &vertData[ray->hit.triId];
+
+		float3 coord = (float3)(ray->hit.u, ray->hit.v, 1 - (ray->hit.u + ray->hit.v));
+
+		//normal
+		float3 norm = BaryCoord3(
+			triVerts->norm1_uv2y.xyz,
+			triVerts->norm2.xyz,
+			triVerts->norm0_uv2x.xyz,
+			coord);
+		norm = normalize(Transform(norm, &mesh->transform, 0.0f));
+		outVertex->normal = norm;
+
+		//texture
+		float2 uv = BaryCoord2(triVerts->uv1, (float2)(triVerts->norm0_uv2x.w, triVerts->norm1_uv2y.w), triVerts->uv0, coord);
+		int iu = (int)(uv[0] * (float)texWidth) % texWidth;
+		int iv = (int)(uv[1] * (float)texHeight) % texHeight;
+		unsigned int texel = texture[iu + iv * texWidth];
+		outVertex->albedo = RGB8toRGB32F(texel);
+
+		//position
+		outVertex->position = ray->origin + ray->hit.distance * ray->direction + mesh->transform.sCDE; //transform to world space
+
+		return true;
+	}
+
+	return false;
+}
+
+float3 CastShadowRays(
+	struct Ray* ray, struct Vertex* vertex,
+	__global struct TLASNode* tlas,
+	__global struct BVHInstance* blas,
+	__global struct BVHNode* bvh, __global uint* bvhTriIndices,
+	__global struct Tri* tris)
+{
+	float3 color = ambientLight;
+
+	struct Ray secondary;
+	secondary.origin = vertex->position + vertex->normal * 0.001f;
+	for (int i = 0; i < NUM_LIGHTS; i++) {
+		//set direction and max dist of raycast
+		float3 dir = lights[i].position - vertex->position;
+		float dist = length(dir);
+		dir *= 1.0f / dist;
+		secondary.direction = dir;
+		secondary.dInv = (float3)(1,1,1) / dir;
+
+		//if the raycast hit something don't calculate lighting
+		if (IntersectTLAS(&secondary, tlas, blas, bvh, bvhTriIndices, tris)) {
+			continue;
+		}
+
+		//diffuse light
+		float diffuse = max(dot(vertex->normal, secondary.direction), 0.0f);
+
+		//final color
+		color += (diffuse) * lights[i].color; //* (1.0f / (dist * dist));
+	}
+	color = color * vertex->albedo;
+
+	//clamp color
+	color = min(color, (float3)(1,1,1));
+
+	//return final color
+	return color;
+}
+
+float3 CastMirrorRays(
+	__global float* skyPixels, __global uint* texture,
+	struct Ray* ray, struct Vertex* vertex, 
+	__global struct TLASNode* tlas,
+	__global struct BVHInstance* blas,
+	__global struct BVHNode* bvh, __global uint* bvhTriIndices,
+	__global struct Tri* tris, __global struct TriVerts* vertData,
+	__global struct MeshInstance* meshInstances,
+	uint skyWidth, uint skyHeight, uint texWidth, uint texHeight)
+{
+	int depth = 0;
+	struct Ray primary = *ray;
+	while (depth < MAX_RAY_DEPTH) {
+		struct Ray secondary;
+		secondary.direction = normalize(primary.direction - 2 * vertex->normal * dot(vertex->normal, primary.direction));
+		secondary.dInv = (float3)(1, 1, 1) / secondary.direction;
+		secondary.origin = vertex->position + secondary.direction * 0.001f;
+		secondary.hit.distance = FLT_MAX;
+
+		int hit = RayCast(texture, texWidth, texHeight, &secondary, vertex, tlas, blas, bvh, bvhTriIndices, tris, vertData, meshInstances);
+
+		if (hit) {
+			if (secondary.hit.meshInstId % 3 != 0) {
+				return CastShadowRays(&ray, &vertex, tlas, blas, bvh, bvhTriIndices, tris);
+			}
+			else {
+				depth++;
+				primary = secondary;
+				continue;
+			}
+		}
+		else {
+			return DrawSkybox(skyPixels, &secondary, skyWidth, skyHeight);
+		}
+	}
+
+	return (float3)(0, 0, 0);
+}
+
 __kernel void render( 
-	__global uint* target,
+	__global uint* target, __global uint* texture,
 	__global float* skyPixels, 
 	__global struct TLASNode* tlas,
 	__global struct Tri* tris, __global struct TriVerts*  vertData, __global struct BVHNode* bvh, __global uint* bvhTriIndices,
 	__global struct MeshInstance* meshInstances, __global struct BVHInstance* bvhInstances,
 	float3 camPos, float3 camBottomLeft, float3 camLengthX, float3 camLengthY, 
-	uint skyWidth, uint skyHeight
+	uint skyWidth, uint skyHeight, uint texWidth, uint texHeight
 )
 {
 
@@ -59,26 +166,20 @@ __kernel void render(
 	struct Vertex vert;
 
 	//raycast
-	bool hit = RayCast(&ray, &vert, tlas, bvhInstances, bvh, bvhTriIndices, tris);
+	bool hit = RayCast(texture, texWidth, texHeight, &ray, &vert, tlas, bvhInstances, bvh, bvhTriIndices, tris, vertData, meshInstances);
 
 	float3 color = (float3)(1, 1, 1);
 	if (hit) {
 		color = colors[ray.hit.meshInstId % 6];
 		if (ray.hit.meshInstId % 3 != 0) {
-			//color = CastShadowRays(vert) * 255.0f;
+			color = CastShadowRays(&ray, &vert, tlas, bvhInstances, bvh, bvhTriIndices, tris);
 		}
 		else {
-			//color = CastMirrorRays(ray, vert) * 255.0f;
+			color = CastMirrorRays(skyPixels, texture, &ray, &vert, tlas, bvhInstances, bvh, bvhTriIndices, tris, vertData, meshInstances, skyWidth, skyHeight, texWidth, texHeight);
 		}
 	}
 	else {
-		//draw skybox
-		float phi = atan2(ray.direction.z, ray.direction.x);
-		uint u = (uint)(skyWidth * (phi > 0 ? phi : (phi + 2 * PI)) * INV2PI - 0.5f);
-		uint v = (uint)(skyHeight * acos(ray.direction.y) * INVPI - 0.5f);
-		uint skyIdx = (u + v * skyWidth) % (skyWidth * skyHeight);
-
-		color = 0.65f * (float3)(skyPixels[skyIdx * 3], skyPixels[skyIdx * 3 + 1], skyPixels[skyIdx * 3 + 2]);
+		color = DrawSkybox(skyPixels, &ray, skyWidth, skyHeight);
 	}
 
 

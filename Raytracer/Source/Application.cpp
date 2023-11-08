@@ -37,7 +37,7 @@ bool Application::Init(GLFWwindow* window)
 	//set up tlas, blas, meshes, and mesh instances
 	for (int i = 0; i < NUM_MESHES; i++) {
 		//int dummy = 0;
-		meshes[i] = new Mesh("Assets/teapot.obj", "Assets/bricks.png", i);
+		meshes[i] = new Mesh("Assets/dragon.obj", "Assets/bricks.png", i);
 		bvh[i] = new BVH(i, meshes[i]->numTris);
 		bvh[i]->Rebuild();
 	}
@@ -73,9 +73,10 @@ bool Application::Init(GLFWwindow* window)
 	tracer = new Kernel("Source/cl/kernels.cl", "render", window); //load and compile file, load render function
 	renderTargetBuffer = new Buffer(window, WIDTH * HEIGHT * 4); //buffer with 4 bytes per pixel
 
+	textureBuffer = new Buffer(window, meshes[0]->texture->width * meshes[0]->texture->height * sizeof(unsigned int), meshes[0]->texture->pixels);
 	skyboxBuffer = new Buffer(window, skyWidth * skyHeight * 3 * sizeof(float), skyPixels); //3 color channels per texel
 	triBuffer = new Buffer(window, meshes[0]->numTris * sizeof(Tri), meshes[0]->tris);
-	vertDataBuffer = new Buffer(window, meshes[0]->numTris * sizeof(TriVerts), meshes[0]->vertData);
+	vertDataBuffer = new Buffer(window, MAX_TRIANGLES * sizeof(TriVerts), meshes[0]->vertData);
 	bvhBuffer = new Buffer(window, bvh[0]->numNodes * sizeof(BVHNode), bvh[0]->nodes);
 	bvhTriIdxBuffer = new Buffer(window, bvh[0]->numTris * sizeof(uint), bvh[0]->triIndices);
 	bvhInstBuffer = new Buffer(window, NUM_MESH_INST * sizeof(BVHInstance), bvhInstances);
@@ -83,6 +84,7 @@ bool Application::Init(GLFWwindow* window)
 	tlasBuffer = new Buffer(window, sizeof(TLASNode) * tlas->numNodes, tlas->nodes);
 
 	//send to gpu once
+	textureBuffer->CopyToDevice();
 	skyboxBuffer->CopyToDevice(); 
 	triBuffer->CopyToDevice(); //no mesh animation, so mesh and bvh are static
 	vertDataBuffer->CopyToDevice();
@@ -91,36 +93,27 @@ bool Application::Init(GLFWwindow* window)
 
 	startFrameTime = clock();
 
-	Util::Print(std::to_string(sizeof(TriVerts)));
-
-	struct Test {
-		//Mat4 mat;
-		//AABB aabb;
-		float f0;
-		__m128 m;
-		float f1;
-	};
-	Util::Print(std::to_string(sizeof(Test)));
-
 	return true;
 }
 
 void Application::Tick(float deltaTime)
 {
 	clock_t startAnimTime = clock();
+
 	AnimateScene(deltaTime);
 	//send to gpu every frame
 	bvhInstBuffer->CopyToDevice();
 	meshInstBuffer->CopyToDevice();
 	tlasBuffer->CopyToDevice();
 	tracer->SetArguments(
-		renderTargetBuffer,
+		renderTargetBuffer, textureBuffer,
 		skyboxBuffer, 
 		tlasBuffer,
 		triBuffer, vertDataBuffer, bvhBuffer, bvhTriIdxBuffer,
 		meshInstBuffer, bvhInstBuffer,
 		camera->GetPosition(), camera->bottomLeft, camera->lengthX, camera->lengthY, 
-		(int)skyWidth, (int)skyHeight);
+		(int)skyWidth, (int)skyHeight,
+		(int)meshes[0]->texture->width, (int)meshes[0]->texture->height);
 	tracer->Run(WIDTH * HEIGHT); //use one thread per pixel
 	renderTargetBuffer->CopyFromDevice(); // copy buffer from VRAM to RAM
 	memcpy(pixels, renderTargetBuffer->GetHostPtr(), renderTargetBuffer->size);
@@ -129,39 +122,45 @@ void Application::Tick(float deltaTime)
 	frames++;
 	return;
 
-	//clock_t startAnimTime = clock();
-	//AnimateScene(deltaTime);
-	//DrawScene();
-	//renderQuad->Draw(pixelData);
-	//totalDrawTime += clock() - startAnimTime;
+	AnimateScene(deltaTime);
+	DrawScene();
+	renderQuad->Draw(pixelData);
+	totalDrawTime += clock() - startAnimTime;
 }
 
+Vec3 Application::DrawSkybox(Ray& ray) {
+	unsigned int u = skyWidth * atan2f(ray.direction[2], ray.direction[0]) * INV2PI - 0.5f;
+	unsigned int v = skyHeight * acosf(ray.direction[1]) * INVPI - 0.5f;
+	unsigned int skyIdx = (u + v * skyWidth) % ((uint)skyWidth * (uint)skyHeight);
+	return Vec3::Min(Vec3::One(), 0.65f * Vec3(skyPixels[skyIdx * 3], skyPixels[skyIdx * 3 + 1], skyPixels[skyIdx * 3 + 2]));
+}
 
 bool Application::RayCast(Ray& ray, Vertex& outVertex, HitInfo& hit, int ignoreID) {
 	//step through bvh for triangles
 	tlas->CalculateIntersection(ray, hit);
 
 	if (hit.triId != -1) {
-		Mesh& mesh = *meshes[meshInstances[hit.meshInstId].meshId];
+		MeshInstance& meshInst = meshInstances[hit.meshInstId];
+		Mesh& mesh = *meshes[meshInst.meshId];
 		TriVerts& vertData = mesh.vertData[hit.triId];
 		Surface& tex = *(mesh.texture);
 
 		Vec3 coord = Vec3(hit.u, hit.v, 1 - (hit.u + hit.v));
 
 		//normal
-		Vec3 norm = Vec3::BaryCoord(vertData.norm[1], vertData.norm[2], vertData.norm[0], coord);
-		norm = Mat4::Transform(norm, meshInstances[hit.meshInstId].GetTransform(), 0.0f).Normalized();
+		Vec3 norm = Vec3::BaryCoord(vertData.norm1, vertData.norm2, vertData.norm0, coord);
+		norm = Mat4::Transform(norm, meshInst.GetTransform(), 0.0f).Normalized();
 		outVertex.normal = norm;
 
 		//texture
-		Vec2 uv = Vec2::BaryCoord(vertData.uv[1], vertData.uv[2], vertData.uv[0], coord);
+		Vec2 uv = Vec2::BaryCoord(vertData.uv1, Vec2(vertData.uv2x, vertData.uv2y), vertData.uv0, coord);
 		int iu = (int)(uv[0] * (float)tex.width) % tex.width;
 		int iv = (int)(uv[1] * (float)tex.height) % tex.height;
 		unsigned int texel = tex.pixels[iu + iv * tex.width];
 		outVertex.albedo = RGB8toRGB32F(texel);
 
 		//position
-		outVertex.position = ray.origin + hit.distance * ray.direction;
+		outVertex.position = ray.origin + hit.distance * ray.direction + meshInst.GetTransform().GetTranslation();
 
 		return true;
 	}
@@ -179,7 +178,7 @@ Vec3 Application::CastShadowRays(const Vertex& vertex) {
 	ray.origin = vertex.position + vertex.normal * 0.001f;
 	for (int i = 0; i < NUM_LIGHTS; i++) {
 		//set direction and max dist of raycast
-		Vec3 dir = (lights[i].position + camera->GetInvPosition()) - vertex.position;
+		Vec3 dir = lights[i].position - vertex.position;
 		float dist = dir.Length();
 		dir *= 1.0f / dist;
 		ray.direction = dir;
@@ -215,33 +214,33 @@ Vec3 Application::CastShadowRays(const Vertex& vertex) {
 	return color;
 }
 
-Vec3 Application::CastMirrorRays(Ray& ray, Vertex& vertex, int rayDepth) {
-	if (rayDepth >= MAX_RAY_DEPTH) {
-		return Vec3::Zero();
-	}
+Vec3 Application::CastMirrorRays(Ray& ray, Vertex& vertex) {
+	int depth = 0;
+	Ray primary = ray;
+	while (depth < MAX_RAY_DEPTH) {
+		Ray secondary;
+		Vec3 dir = (primary.direction - 2 * vertex.normal * Vec3::Dot(vertex.normal, primary.direction)).Normalized();
+		Vec3 pos = vertex.position + dir * 0.001f;
+		secondary.Set(pos, dir);
 
-	Ray secondary;
-	Vec3 dir = (ray.direction - 2 * vertex.normal * Vec3::Dot(vertex.normal, ray.direction)).Normalized();
-	Vec3 pos = vertex.position + dir * 0.001f;
-	secondary.Set(pos, dir);
+		HitInfo hitInfo;
+		int hit = RayCast(secondary, vertex, hitInfo);
 
-
-	HitInfo hitInfo;
-	int hit = RayCast(secondary, vertex, hitInfo);
-
-	if (hit) {
-		if (hitInfo.meshInstId % 3 != 0)
-			return CastShadowRays(vertex);
-		else
-			return CastMirrorRays(ray, vertex, rayDepth + 1);
-	}
-	else {
-		//draw skybox
-		unsigned int u = skyWidth * atan2f(secondary.direction[2], secondary.direction[0]) * INV2PI - 0.5f;
-		unsigned int v = skyHeight * acosf(secondary.direction[1]) * INVPI - 0.5f;
-		unsigned int skyIdx = u + v * skyWidth;
-		if (skyIdx < (uint)skyWidth * (uint)skyHeight)
-			return Vec3::Min(Vec3::One(), 0.65f * Vec3(skyPixels[skyIdx * 3], skyPixels[skyIdx * 3 + 1], skyPixels[skyIdx * 3 + 2]));
+		if (hit) {
+			if (hitInfo.meshInstId % 3 != 0) {
+				return colors[depth];
+				return CastShadowRays(vertex);
+			}
+			else {
+				depth++;
+				primary = secondary;
+				continue;
+			}
+		}
+		else {
+			return colors[depth];
+			return DrawSkybox(secondary);
+		}
 	}
 
 	return Vec3::Zero();
@@ -282,7 +281,7 @@ void Application::AnimateScene(float deltaTime) {
 		else R = Mat4::CreateTranslation(Vec3(0, h[i / 2], 0));
 		if ((a[i] += (((i * 13) & 7) + 2) * 0.005f) > 2 * PI) a[i] -= 2 * PI;
 		if ((s[i] -= 0.01f, h[i] += s[i]) < 0) s[i] = 0.2f;
-		Mat4 transform = Mat4::CreateScale(0.75f) * R * T * Mat4::CreateTranslation(Vec3(2.0f, 0.0f, 0.0f));
+		Mat4 transform = Mat4::CreateScale(0.01f) * R * T * Mat4::CreateTranslation(Vec3(2.0f, 0.0f, 0.0f));
 		meshInstances[i].SetTransform(transform);
 		bvhInstances[i].SetTransform(transform);
 	}
@@ -323,22 +322,19 @@ void Application::DrawScene()
 					color = Vec3::Zero();
 					if (hit) {
 						if (hitInfo.meshInstId % 3 != 0)
-							color = CastShadowRays(vert) * 255.0f;
+							color = CastShadowRays(vert);
 						else
-							color = CastMirrorRays(ray, vert) * 255.0f;
+							color = CastMirrorRays(ray, vert);
 					}
 					else {
 						//draw skybox
-						unsigned int u = skyWidth * atan2f(ray.direction[2], ray.direction[0]) * INV2PI - 0.5f;
-						unsigned int v = skyHeight * acosf(ray.direction[1]) * INVPI - 0.5f;
-						unsigned int skyIdx = u + v * skyWidth;
-						if (skyIdx < (uint)skyWidth * (uint)skyHeight)
-							color = Vec3::Min(Vec3::One(), 0.65f * Vec3(skyPixels[skyIdx * 3], skyPixels[skyIdx * 3 + 1], skyPixels[skyIdx * 3 + 2])) * 255.0f;
+						color = DrawSkybox(ray);
 					}
 				}
 
 				raycastTime += (clock() - startRayTime);
 
+				color *= 255.0f;
 				for (i = 0; i < 3; i++) {
 					pixelData[v][u][i] = (GLubyte)color[i];
 				}

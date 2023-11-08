@@ -16,11 +16,6 @@ struct HitInfo;
 struct Vertex;
 struct GLFWwindow;
 
-constexpr int NUM_MESHES = 1;
-constexpr int NUM_MESH_INST = 9;
-constexpr int NUM_LIGHTS = 1;
-constexpr int MAX_RAY_DEPTH = 4;
-
 class Application {
 
 private:
@@ -59,12 +54,14 @@ private:
 	/// <summary>
 	/// bounce rays for a pure mirror effect
 	/// </summary>
-	Vec3 CastMirrorRays(Ray& ray, Vertex& vertex, int rayDepth = 0);
+	Vec3 CastMirrorRays(Ray& ray, Vertex& vertex);
 
 	/// <summary>
 	/// raycast from a point to each light source, return phong shading color with shadows
 	/// </summary>
 	Vec3 CastShadowRays(const Vertex& vertex);
+
+	Vec3 DrawSkybox(Ray& ray);
 
 	inline Vec3 RGB8toRGB32F(unsigned int c)
 	{
@@ -106,6 +103,7 @@ private:
 
 	//gpu buffers
 	Buffer* renderTargetBuffer;
+	Buffer* textureBuffer;
 	Buffer* skyboxBuffer;
 	Buffer* triBuffer;
 	Buffer* vertDataBuffer;

@@ -20,8 +20,9 @@ struct Vertex
 
 struct TriVerts
 {
-	//Vertex verts[3];
-	Vec3 norm[3];
-	Vec2 uv[3];
-	Vec2 pad0;
+	union { Vec3 norm0; struct { float pad0[3]; float uv2x; }; };
+	union { Vec3 norm1; struct { float pad1[3]; float uv2y; }; };
+	Vec3 norm2;
+	Vec2 uv0;
+	Vec2 uv1;
 };

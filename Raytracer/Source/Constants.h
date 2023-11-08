@@ -2,10 +2,16 @@
 #define PI 3.14159265358979323
 #define INV2PI 0.15915494309
 #define INVPI 0.31830988618
-#define MAX_TRIANGLES 2000
+
+#define MAX_TRIANGLES 20000
 #define MAX_SPHERES 10
 #define MAX_LIGHTS 10
-#define MAX_BVH_STACK 50
+#define MAX_BVH_STACK 100
+#define MAX_RAY_DEPTH 4
+
+#define NUM_LIGHTS 1
+#define NUM_MESHES 1
+#define NUM_MESH_INST 9
 
 //different display modes
 #define MODE_DISPLAY 1

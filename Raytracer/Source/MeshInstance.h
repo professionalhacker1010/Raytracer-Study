@@ -21,5 +21,5 @@ private:
 public:
 	int meshId; //4
 	int id; //4
-	float pad0 = 0, pad1 = 0;
+	float pad[14];
 };

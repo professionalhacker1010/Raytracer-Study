@@ -1,5 +1,8 @@
 #pragma once
-
+struct Light {
+	float3 position;
+	float3 color;
+};
 
 struct HitInfo {
 	float distance;
@@ -28,15 +31,17 @@ struct Tri {
 };
 
 struct TriVerts {
-	float3 norm0, norm1, norm2; //48
-	float2 uv0, uv1, uv2, pad0; //80
+	float4 norm0_uv2x;
+	float4 norm1_uv2y;
+	float4 norm2;
+	float2 uv0, uv1; //64
 };
 
 struct MeshInstance {
 	float16 transform; //64 bytes
 	int meshId;
-	int id;
-	float pad0, pad1; //80
+	int id; //72
+	float pad[14]; //124
 };
 
 struct BVHNode {
@@ -79,15 +84,26 @@ inline float3 RGB8toRGB32F(uint c)
 	return (float3)(r * s, g * s, b * s);
 }
 
-float3 Transform(float3 vec, float16 mat, float w) {
-	//float4 v = (float4)(w, vec[2], vec[1], vec[0]);
+float3 BaryCoord3(float3 p0, float3 p1, float3 p2, float3 coord) {
+	return (p0 * coord[0] + p1 * coord[1] + p2 * coord[2]);
+}
+
+float2 BaryCoord2(float2 p0, float2 p1, float2 p2, float3 coord) {
+	return (p0 * coord[0] + p1 * coord[1] + p2 * coord[2]);
+}
+
+//0123
+//4567
+//89AB
+//CDEF
+float3 Transform(float3 vec, __global float16* mat, float w) {
 	float4 v = (float4)(vec[0], vec[1], vec[2], w);
 
 	return (float3)(
-		dot(v, (float4)(mat[0], mat[4], mat[8], mat[12])),
-		dot(v, (float4)(mat[1], mat[5], mat[9], mat[13])),
-		dot(v, (float4)(mat[2], mat[6], mat[10], mat[14]))
-		);
+		dot(v, mat->s048C),
+		dot(v, mat->s159D),
+		dot(v, mat->s26AE)
+	);
 }
 
 float IntersectAABB(struct Ray* ray, float3 minBounds, float3 maxBounds) {
@@ -203,13 +219,10 @@ bool IntersectBVHInstance(
 	__global struct Tri* tris)
 {
 	//transform the ray to do intersection on the un-transformed bvh
-	struct Ray backupRay;
-	backupRay.origin = ray->origin;
-	backupRay.direction = ray->direction;
-	backupRay.dInv = ray->dInv;
+	struct Ray backupRay = *ray;
 
-	ray->origin = Transform(ray->origin, blas->invTransform, 1.0f);
-	ray->direction = Transform(ray->direction, blas->invTransform, 0.0f);
+	ray->origin = Transform(ray->origin, &blas->invTransform, 1.0f);
+	ray->direction = Transform(ray->direction, &blas->invTransform, 0.0f);
 	ray->dInv = (float3)(1, 1, 1) / ray->direction;
 
 	bool hit = IntersectBVH(ray, bvh, bvhTriIndices, tris);
@@ -272,4 +285,13 @@ bool IntersectTLAS(
 		}
 	}
 	return hasHit;
+}
+
+float3 DrawSkybox(__global float* skyPixels, struct Ray* ray, uint skyWidth, uint skyHeight) {
+	//draw skybox
+	float phi = atan2(ray->direction.z, ray->direction.x);
+	uint u = (uint)(skyWidth * (phi > 0 ? phi : (phi + 2 * PI)) * INV2PI - 0.5f);
+	uint v = (uint)(skyHeight * acos(ray->direction.y) * INVPI - 0.5f);
+	uint skyIdx = (u + v * skyWidth) % (skyWidth * skyHeight);
+	return 0.65f * (float3)(skyPixels[skyIdx * 3], skyPixels[skyIdx * 3 + 1], skyPixels[skyIdx * 3 + 2]);
 }
