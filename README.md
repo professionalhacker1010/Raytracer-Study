@@ -6,3 +6,5 @@ Resources
 https://jacco.ompf2.com/2022/04/13/how-to-build-a-bvh-part-1-basics/
 <br/>
 https://raytracing.github.io/books/RayTracingInOneWeekend.html
+<br/>
+https://psgraphics.blogspot.com/2018/10/flavors-of-sampling-in-ray-tracing.html
