@@ -91,9 +91,7 @@ private:
 	float* skyPixels;
 
 	//rendering
-	RenderQuad* renderQuad;
-	GLubyte pixelData[HEIGHT][WIDTH][4];
-	unsigned int pixels[HEIGHT * WIDTH * 4];
+	unsigned int pixelData[HEIGHT][WIDTH][4];
 
 	//mouse
 	Vec2 mousePos;
@@ -102,7 +100,6 @@ private:
 	Kernel* tracer;
 
 	//gpu buffers
-	Buffer* renderTargetBuffer;
 	Buffer* textureBuffer;
 	Buffer* skyboxBuffer;
 	Buffer* triBuffer;

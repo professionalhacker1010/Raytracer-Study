@@ -66,6 +66,26 @@ struct TLASNode {
 	uint BLAS;
 };
 
+uint WangHash(uint s)
+{
+	s = (s ^ 61) ^ (s >> 16);
+	s *= 9, s = s ^ (s >> 4);
+	s *= 0x27d4eb2d;
+	s = s ^ (s >> 15);
+	return s;
+}
+uint RandomInt(uint* s) // Marsaglia's XOR32 RNG
+{
+	*s ^= *s << 13;
+	*s ^= *s >> 17;
+	*s ^= *s << 5;
+	return *s;
+}
+float RandomFloat(uint* s)
+{
+	return RandomInt(s) * 2.3283064365387e-10f; // = 1 / (2^32-1)
+}
+
 
 inline uint RGB32FtoRGB8(float3 c)
 {
@@ -84,11 +104,11 @@ inline float3 RGB8toRGB32F(uint c)
 	return (float3)(r * s, g * s, b * s);
 }
 
-float3 BaryCoord3(float3 p0, float3 p1, float3 p2, float3 coord) {
+inline float3 BaryCoord3(float3 p0, float3 p1, float3 p2, float3 coord) {
 	return (p0 * coord[0] + p1 * coord[1] + p2 * coord[2]);
 }
 
-float2 BaryCoord2(float2 p0, float2 p1, float2 p2, float3 coord) {
+inline float2 BaryCoord2(float2 p0, float2 p1, float2 p2, float3 coord) {
 	return (p0 * coord[0] + p1 * coord[1] + p2 * coord[2]);
 }
 

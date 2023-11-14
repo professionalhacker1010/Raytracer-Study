@@ -51,7 +51,6 @@ bool Application::Init(GLFWwindow* window)
 	}
 
 	tlas = new TLAS(bvhInstances, NUM_MESH_INST);
-
 	tlas->Rebuild();
 
 	//lights
@@ -61,8 +60,8 @@ bool Application::Init(GLFWwindow* window)
 	lights[1].color = Vec3(255, 255, 191) / 255.0f;
 	ambientLight = Vec3(60, 56, 79) / 255.0f;
 
-	renderQuad = new RenderQuad();
 	camera = &Camera::Get();
+	camera->Init(window);
 
 	// load HDR sky
 	int bpp = 0;
@@ -71,7 +70,6 @@ bool Application::Init(GLFWwindow* window)
 
 	// prepare OpenCL and buffers
 	tracer = new Kernel("Source/cl/kernels.cl", "render", window); //load and compile file, load render function
-	renderTargetBuffer = new Buffer(window, WIDTH * HEIGHT * 4); //buffer with 4 bytes per pixel
 
 	textureBuffer = new Buffer(window, meshes[0]->texture->width * meshes[0]->texture->height * sizeof(unsigned int), meshes[0]->texture->pixels);
 	skyboxBuffer = new Buffer(window, skyWidth * skyHeight * 3 * sizeof(float), skyPixels); //3 color channels per texel
@@ -106,7 +104,7 @@ void Application::Tick(float deltaTime)
 	meshInstBuffer->CopyToDevice();
 	tlasBuffer->CopyToDevice();
 	tracer->SetArguments(
-		renderTargetBuffer, textureBuffer,
+		camera->renderTargetBuffer, textureBuffer,
 		skyboxBuffer, 
 		tlasBuffer,
 		triBuffer, vertDataBuffer, bvhBuffer, bvhTriIdxBuffer,
@@ -115,17 +113,15 @@ void Application::Tick(float deltaTime)
 		(int)skyWidth, (int)skyHeight,
 		(int)meshes[0]->texture->width, (int)meshes[0]->texture->height);
 	tracer->Run(WIDTH * HEIGHT); //use one thread per pixel
-	renderTargetBuffer->CopyFromDevice(); // copy buffer from VRAM to RAM
-	memcpy(pixels, renderTargetBuffer->GetHostPtr(), renderTargetBuffer->size);
-	renderQuad->Draw(pixels);
+	camera->Render();
 	totalDrawTime += clock() - startAnimTime;
 	frames++;
 	return;
 
-	AnimateScene(deltaTime);
-	DrawScene();
-	renderQuad->Draw(pixelData);
-	totalDrawTime += clock() - startAnimTime;
+	//AnimateScene(deltaTime);
+	//DrawScene();
+	//camera->Render();
+	//totalDrawTime += clock() - startAnimTime;
 }
 
 Vec3 Application::DrawSkybox(Ray& ray) {
@@ -228,7 +224,6 @@ Vec3 Application::CastMirrorRays(Ray& ray, Vertex& vertex) {
 
 		if (hit) {
 			if (hitInfo.meshInstId % 3 != 0) {
-				return colors[depth];
 				return CastShadowRays(vertex);
 			}
 			else {
@@ -238,7 +233,6 @@ Vec3 Application::CastMirrorRays(Ray& ray, Vertex& vertex) {
 			}
 		}
 		else {
-			return colors[depth];
 			return DrawSkybox(secondary);
 		}
 	}
@@ -336,9 +330,9 @@ void Application::DrawScene()
 
 				color *= 255.0f;
 				for (i = 0; i < 3; i++) {
-					pixelData[v][u][i] = (GLubyte)color[i];
+					camera->pixelData[v][u][i] = (GLubyte)color[i];
 				}
-				pixelData[v][u][3] = (GLubyte)255.0f;
+				camera->pixelData[v][u][3] = (GLubyte)255.0f;
 			}
 		}
 	}
@@ -374,11 +368,8 @@ void Application::Shutdown() {
 	FREE64(bvhInstances);
 	FREE64(meshInstances);
 
-	delete renderQuad;
-
 	delete skyPixels;
 	delete skyboxBuffer;
-	delete renderTargetBuffer;
 	delete tracer;
 	system("pause");
 }

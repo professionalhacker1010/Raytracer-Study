@@ -154,33 +154,50 @@ __kernel void render(
 	int x = threadIdx % WIDTH;
 	int y = threadIdx / WIDTH;
 	
-	//calculate ray
+	//jittered sampling
+	float3 color = (float3)(0, 0, 0);
+	int dimension = 2; //4 samples in 2x2 grid
+	int samples = 4;
+	uint seed = WangHash(threadIdx * 17 + 1);
 	struct Ray ray;
-	ray.hit.distance = FLT_MAX;
-	ray.hit.triId = -1;
-	ray.hit.meshInstId = -1;
-	ray.origin = camPos;
-	ray.direction = normalize(camBottomLeft + (camLengthY * ((float)y / (float)HEIGHT)) + (camLengthX * ((float)x / (float)WIDTH))); //get interpolated direction
-	ray.dInv = (float3)(1, 1, 1) / ray.direction;
 
-	struct Vertex vert;
+	for (int s = 0; s < dimension; s++) {
+		for (int t = 0; t < dimension; t++) {
+			float u = ((float)s + RandomFloat(&seed)) / (float)dimension;
+			float v = ((float)t + RandomFloat(&seed)) / (float)dimension;
 
-	//raycast
-	bool hit = RayCast(texture, texWidth, texHeight, &ray, &vert, tlas, bvhInstances, bvh, bvhTriIndices, tris, vertData, meshInstances);
+			//calculate ray
+			ray.hit.distance = FLT_MAX;
+			ray.hit.triId = -1;
+			ray.hit.meshInstId = -1;
+			ray.origin = camPos;
+			ray.direction = normalize(
+				camBottomLeft +
+				(camLengthY * (((float)y + u) / (float)HEIGHT)) +
+				(camLengthX * (((float)x + v) / (float)WIDTH))); //get interpolated direction
+			ray.dInv = (float3)(1, 1, 1) / ray.direction;
 
-	float3 color = (float3)(1, 1, 1);
-	if (hit) {
-		color = colors[ray.hit.meshInstId % 6];
-		if (ray.hit.meshInstId % 3 != 0) {
-			color = CastShadowRays(&ray, &vert, tlas, bvhInstances, bvh, bvhTriIndices, tris);
-		}
-		else {
-			color = CastMirrorRays(skyPixels, texture, &ray, &vert, tlas, bvhInstances, bvh, bvhTriIndices, tris, vertData, meshInstances, skyWidth, skyHeight, texWidth, texHeight);
+			struct Vertex vert;
+
+			//raycast
+			bool hit = RayCast(texture, texWidth, texHeight, &ray, &vert, tlas, bvhInstances, bvh, bvhTriIndices, tris, vertData, meshInstances);
+
+
+			if (hit) {
+				if (ray.hit.meshInstId % 3 != 0) {
+					color += CastShadowRays(&ray, &vert, tlas, bvhInstances, bvh, bvhTriIndices, tris);
+				}
+				else {
+					color += CastMirrorRays(skyPixels, texture, &ray, &vert, tlas, bvhInstances, bvh, bvhTriIndices, tris, vertData, meshInstances, skyWidth, skyHeight, texWidth, texHeight);
+				}
+			}
+			else {
+				color += DrawSkybox(skyPixels, &ray, skyWidth, skyHeight);
+			}
 		}
 	}
-	else {
-		color = DrawSkybox(skyPixels, &ray, skyWidth, skyHeight);
-	}
+
+	color /= samples;
 
 
     // plot a pixel into the target array in GPU memory
