@@ -175,6 +175,7 @@
   <ItemGroup>
     <None Include="ReadMe.txt" />
     <None Include="Source\cl\kernels.cl" />
+    <None Include="Source\cl\UtilCL.cl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Application.cpp" />
@@ -237,7 +238,6 @@
     <ClInclude Include="Source\Tri.h" />
     <ClInclude Include="Source\Util.h" />
     <ClInclude Include="Source\Vertex.h" />
-    <ClInclude Include="UtilCL.cl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,5 +1,5 @@
 #include "Source/Constants.h"
-#include "UtilCL.cl"
+#include "Source/cl/UtilCL.cl"
 
 __constant struct Light lights[2] = {
 	((float3)(3, 10, 2), (float3)(1, 1, 1)),

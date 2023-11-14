@@ -25,6 +25,9 @@
     <None Include="Source\cl\kernels.cl">
       <Filter>Source Files\cl</Filter>
     </None>
+    <None Include="Source\cl\UtilCL.cl">
+      <Filter>Source Files\cl</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\AABB.h">
@@ -140,9 +143,6 @@
     </ClInclude>
     <ClInclude Include="Source\Error.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="UtilCL.cl">
-      <Filter>Source Files\cl</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
